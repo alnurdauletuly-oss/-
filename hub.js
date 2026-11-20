@@ -1,26 +1,18 @@
 const modules = [
   { id: 'habits', title: 'Основа', subtitle: 'Ритм твоего дня', description: 'Отмечай привычки и сохраняй важные события.', color: 'mint', art: 'checks', features: ['Привычки', 'Календарь'] },
-  { id: 'analytics', title: 'Аналитика', subtitle: 'Замечай закономерности', description: 'Посмотри, как прошла неделя и какие привычки даются легче.', color: 'blue', art: 'bars', features: ['Обзор недели', 'По привычкам'] },
-  { id: 'progress', title: 'Прогресс', subtitle: 'Маленькие шаги видны', description: 'Твои выполненные действия складываются в историю роста.', color: 'peach', art: 'rings', features: ['Выполнения', 'Личный результат'] },
-  { id: 'streak', title: 'Streak', subtitle: 'Продолжай в своём темпе', description: 'Серии и возвращение к привычкам после перерыва.', color: 'lavender', art: 'streak', planned: true },
-  { id: 'goals', title: 'Цели', subtitle: 'Держи важное в фокусе', description: 'Соедини большую цель с ежедневными действиями и своей причиной.', color: 'rose', art: 'goal', planned: true },
-  { id: 'notes', title: 'Заметки', subtitle: 'Сохрани то, что важно', description: 'Открытия, мысли и маленькие победы — рядом с привычками.', color: 'sand', art: 'note', planned: true },
-  { id: 'systems', title: 'Мой путь', subtitle: 'Собери свою историю', description: 'Хронология, напоминания и оформление твоего пространства.', color: 'aqua', art: 'journey', planned: true },
-  { id: 'future', title: 'Future Self', subtitle: 'Представь себя завтра', description: 'Образ себя, к которому ты идёшь. Выбери, что хочешь развивать.', color: 'sky', art: 'future', planned: true }
+  { id: 'analytics', title: 'Аналитика', subtitle: 'Замечай закономерности', description: 'Динамика по дням и привычки, которые идут легче.', color: 'blue', art: 'bars', features: ['Обзор недели', 'По привычкам'] },
+  { id: 'notes', title: 'Заметки', subtitle: 'Сохрани свои мысли', description: 'Запиши идею, план или маленькую победу.', color: 'sand', art: 'note' },
+  { id: 'goals', title: 'Цели', subtitle: 'Держи важное в фокусе', description: 'Соедини большую цель с ежедневными действиями.', color: 'rose', art: 'goal', planned: true }
 ];
 
 function illustration(type) {
   const pictures = {
-    checks: '<div class="mini-tracker"><div class="mini-title">Моя неделя <span>ПН · ВС</span></div>' +
+    checks: '<div class="mini-tracker"><div class="mini-title">Мои привычки <span>ПН · ВС</span></div>' +
       ['Чтение', 'Движение', 'Новые знания'].map((name,row) =>
         '<div class="mini-row"><span>'+name+'</span>'+Array.from({length:5},(_,i)=>'<i class="'+(i<4-row?'filled':'')+'">'+(i<4-row?'✓':'')+'</i>').join('')+'</div>').join('')+'</div>',
     bars: '<div class="mini-chart"><div class="mini-title">Твой ритм</div><div class="bars">'+[42,70,52,86,65,100,78].map((n,i)=>'<div><i style="--height:'+n+'%"></i><span>'+weekdays[i]+'</span></div>').join('')+'</div></div>',
-    rings: '<div class="orbit"><div class="orbit-inner"><span>Каждый шаг</span><strong>имеет вес</strong><span class="spark">✧</span></div></div>',
-    streak: '<div class="mini-streak"><span class="streak-sun">☀</span><strong>Снова в ритме</strong><div>'+['✓','✓','✓','·','✓','✓',''].map(c=>'<i>'+c+'</i>').join('')+'</div></div>',
     goal: '<div class="goal-art"><div class="target"><div><div></div></div></div><span>Моя цель</span></div>',
-    note: '<div class="paper"><span>Сегодня получилось…</span><i></i><i></i><i></i><b>✧</b></div>',
-    journey: '<div class="journey-art"><div><i></i><span>Первый шаг</span></div><div><i></i><span>Новая привычка</span></div><div><i></i><span>Моя маленькая победа</span></div></div>',
-    future: '<div class="future-art"><div class="sun"></div><div class="hill one"></div><div class="hill two"></div><span>Всё начинается с тебя</span></div>'
+    note: '<div class="paper"><span>Сегодня получилось…</span><i></i><i></i><i></i><b>✧</b></div>'
   };
   return pictures[type];
 }
@@ -31,25 +23,19 @@ function homeScreen() {
 }
 
 function analyticsScreen(days) {
-  const totals = days.map(date => {
-    const habits = state.habits.filter(habit => habit.days.includes(weekday(date)));
-    return { planned: habits.length, done: habits.filter(habit => habit.done.includes(key(date))).length };
-  });
-  const planned = totals.reduce((sum, day) => sum + day.planned, 0);
-  const done = totals.reduce((sum, day) => sum + day.done, 0);
-  const percent = planned ? Math.round(done / planned * 100) : 0;
-  return '<div class="analytics-layout"><div class="stat-panel"><span>Привычки за выбранную неделю</span><strong>'+done+'<small> / '+planned+'</small></strong><p>'+percent+'% недельного плана выполнено</p><progress max="100" value="'+percent+'" aria-label="Доля выполненного недельного плана"></progress></div><div class="panel chart-panel"><h2>Выполнение по дням</h2><div class="real-chart">'+totals.map((day,index)=>'<div><span>'+day.done+'/'+day.planned+'</span><div class="bar-track"><i style="height:'+(day.planned?day.done/day.planned*100:0)+'%"></i></div><small>'+weekdays[index]+'</small></div>').join('')+'</div></div></div><div class="panel breakdown"><h2>Каждая привычка</h2>'+state.habits.map(habit=>{
-    const target=days.filter(d=>habit.days.includes(weekday(d)));
-    const count=target.filter(d=>habit.done.includes(key(d))).length;
-    return '<div class="breakdown-row"><span>'+safe(habit.name)+'</span><progress max="'+(target.length||1)+'" value="'+count+'"></progress><b>'+count+' / '+target.length+'</b></div>';
-  }).join('')+'</div>';
-}
-
-function progressScreen() {
-  return '<p class="section-intro">Каждая отметка — действие, которое ты уже сделал.</p><div class="progress-grid">'+state.habits.map(habit=>{
-    const count=habit.done.length;
-    return '<article class="result-card"><span class="result-symbol">✧</span><h2>'+safe(habit.name)+'</h2><strong>'+count+'</strong><span>выполнений за всё время</span><p>'+(count?'Последняя отметка · '+short(new Date([...habit.done].sort().at(-1)+'T12:00:00')):'Первый шаг ещё впереди')+'</p></article>';
-  }).join('')+'</div>';
+  const elapsed=days.filter(date=>date<=today);
+  const daily=elapsed.map(date=>dailyProductivity(date));
+  const planned=daily.reduce((sum,day)=>sum+day.planned,0);
+  const done=daily.reduce((sum,day)=>sum+day.done,0);
+  const percent=planned?Math.round(done/planned*100):0;
+  const active=daily.filter(day=>day.planned);
+  const best=active.length?active.reduce((best,day)=>day.percent>best.percent?day:best):null;
+  return `<div class="insight-grid"><article class="insight-card"><span>Выполнено</span><strong>${done}<small> / ${planned}</small></strong><p>Отметок за выбранную неделю</p></article><article class="insight-card"><span>Общий результат</span><strong>${percent}%</strong><p>Выполнено из запланированного</p></article><article class="insight-card"><span>Лучший день</span><strong>${best?best.percent+'%':'—'}</strong><p>${best?fmt(best.date,{weekday:'long',day:'numeric',month:'long'}):'Появится после первой отметки'}</p></article></div>${lineChart(days)}<section class="panel breakdown"><h2>Привычки по отдельности</h2><p class="muted">Считаются только дни, которые уже наступили.</p>${state.habits.length?state.habits.map(habit=>{
+    const target=elapsed.filter(date=>habit.days.includes(weekday(date)));
+    const count=target.filter(date=>habit.done.includes(key(date))).length;
+    const share=target.length?Math.round(count/target.length*100):0;
+    return `<div class="breakdown-row"><span>${safe(habit.name)}</span><progress max="100" value="${share}"></progress><b>${share}%</b></div>`;
+  }).join(''):'<p class="muted">Добавь первую привычку в «Основе».</p>'}</section>`;
 }
 
 function plannedScreen(module) {

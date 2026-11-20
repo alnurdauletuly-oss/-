@@ -251,3 +251,91 @@ form input:not([type=checkbox]), select { background: #f6f8f9; padding: 12px; }
 @media(max-width:1100px) { .module-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media(max-width:750px) { .module-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .quick-habit { flex-wrap:wrap; } .quick-habit input { flex-basis:100%; } }
 @media(max-width:500px) { .site-nav { min-height:64px; } .module-grid { gap:10px; } .card-art { height:105px; } .card-copy { padding:11px; } .card-copy h2 { font-size:18px; } .card-copy > p:not(.card-subtitle) { font-size:11px; } .card-subtitle { font-size:10px; } .card-foot { font-size:10px; } .calendar button { min-height:78px; padding:4px; } .calendar .event-chip { font-size:9px; } .calendar .weekday { padding:5px; } .quick-habit { padding:12px; } .candle-chart { padding:15px 10px; } }
+
+/* Four destinations */
+.home-page .module-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.home-page .card-art { height:180px; }
+.home-page .card-copy { min-height:190px; }
+/* Daily result, shown as a line with points and dated axes */
+.victory-panel { margin-top:18px; padding:22px 26px; border-radius:20px; background:linear-gradient(115deg,#eaf7e8,#f8f8e9); border:1px solid #d8ead8; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+.victory-eyebrow { color:#377d63; font-size:11px; font-weight:800; letter-spacing:.13em; }
+.victory-count { display:flex; align-items:baseline; gap:9px; }
+.victory-count strong { font-size:48px; line-height:1.1; letter-spacing:-.06em; color:#297452; }
+.victory-count span { font-size:17px; font-weight:700; }
+.victory-panel p { color:#668274; font-size:13px; }
+.victory-days { display:flex; gap:8px; }
+.victory-days>div { min-width:40px; display:grid; justify-items:center; gap:5px; color:#80988c; }
+.victory-days span { font-size:11px; }
+.victory-days b { width:35px; height:35px; display:grid; place-items:center; border-radius:50%; background:white; font-size:18px; }
+.victory-days .won b { background:#3aa36a; color:white; }
+.victory-days .current b { outline:2px solid #3aa36a; outline-offset:2px; }
+.line-panel { margin-top:18px; }
+.line-panel .panel-head { border-bottom:1px solid var(--line); }
+.chart-scroll { overflow-x:auto; }
+.productivity-chart { display:block; width:100%; min-width:610px; height:auto; padding:8px 16px 12px; }
+.line-grid { stroke:#e6eeeb; stroke-width:1; }
+.line-path { fill:none; stroke:#28866f; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.line-dot { fill:#fff; stroke:#28866f; stroke-width:3; }
+.axis-label { fill:#71817b; font-size:11px; font-weight:600; }
+.point-label { fill:#236b5b; font-size:11px; font-weight:700; }
+.insight-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.insight-card { background:#fff; border:1px solid var(--line); border-radius:18px; padding:23px; display:flex; flex-direction:column; gap:7px; }
+.insight-card>span { color:var(--muted); font-size:13px; }
+.insight-card strong { font-size:39px; letter-spacing:-.055em; line-height:1.1; }
+.insight-card strong small { font-size:20px; color:var(--muted); font-weight:500; }
+.insight-card p { color:var(--muted); font-size:12px; }
+.breakdown>p { margin-top:5px; }
+/* Notes: familiar phone note list, spacious writing surface */
+.notes-page main { max-width:1500px; }
+.notes-app { display:grid; grid-template-columns:minmax(260px,340px) minmax(0,1fr); min-height:600px; background:#fff; border:1px solid #e4e7e2; border-radius:20px; overflow:hidden; box-shadow:0 10px 40px #21344708; }
+.notes-list { border-right:1px solid #e8e9e3; background:#fbfbf8; min-width:0; }
+.notes-search { margin:16px; border-radius:11px; background:#eeefec; display:flex; align-items:center; padding:0 11px; gap:7px; color:#919b94; }
+.notes-search span { font-size:25px; line-height:1; }
+.notes-search input { border:0; outline:none; background:transparent; width:100%; padding:12px 2px; color:var(--text); }
+.notes-list-head { display:flex; justify-content:space-between; padding:2px 19px 13px; color:#26332d; }
+.notes-list-head span { color:#8e9991; font-size:13px; }
+.note-items { padding:0 9px 18px; max-height:660px; overflow:auto; }
+.note-item { display:flex; flex-direction:column; width:100%; text-align:left; border:0; border-radius:12px; padding:14px 12px; background:transparent; gap:3px; }
+.note-item:hover,.note-item.selected { background:#fff2cc; }
+.note-item strong { font-size:15px; }
+.note-item span { font-size:13px; color:#5d665e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
+.note-item small { font-size:11px; color:#9b8261; }
+.note-empty { padding:20px; color:var(--muted); font-size:14px; }
+.note-editor { display:flex; flex-direction:column; min-width:0; padding:18px 28px 23px; }
+.note-actions { display:flex; align-items:center; gap:8px; color:#8a958b; font-size:12px; }
+.note-actions span { flex:1; text-align:center; }
+.note-actions button { border:0; background:transparent; padding:7px; font-size:14px; }
+.note-actions button[data-note-back] { display:none; }
+.note-actions button[data-pin-note] { font-size:23px; color:#b78120; }
+#note-title { border:0; outline:none; width:100%; font-size:30px; font-weight:750; letter-spacing:-.04em; margin:26px 0 13px; background:transparent; }
+#note-body { border:0; outline:none; resize:vertical; flex:1; min-height:360px; width:100%; line-height:1.65; font-size:16px; font-family:inherit; background:transparent; color:var(--text); }
+.note-updated { font-size:12px; color:#9ba59e; text-align:center; margin-top:15px; }
+.note-placeholder { margin:auto; text-align:center; color:#758379; }
+.note-placeholder span { display:block; font-size:55px; color:#d3ac4f; }
+.note-placeholder h2 { color:#29372e; font-size:26px; margin:8px 0; }
+.note-placeholder p { margin-bottom:20px; }
+@media(max-width:900px) { .home-page .module-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .home-page .card-art { height:150px; } }
+@media(max-width:700px) {
+  .site-nav .home-link { display:none; }
+  .home-page .card-copy { min-height:160px; }
+  .victory-panel { flex-direction:column; align-items:stretch; padding:19px; }
+  .victory-days { justify-content:space-between; }
+  .victory-days>div { min-width:0; }
+  .insight-grid { grid-template-columns:1fr 1fr; }
+  .insight-card:last-child { grid-column:1/-1; }
+  .notes-app { display:block; min-height:calc(100dvh - 220px); }
+  .notes-list { border-right:0; min-height:calc(100dvh - 220px); }
+  .notes-app.note-selected .notes-list { display:none; }
+  .notes-app:not(.note-selected) .note-editor { display:none; }
+  .notes-app.note-selected .note-editor { min-height:calc(100dvh - 220px); padding:12px 18px 22px; }
+  .note-actions button[data-note-back] { display:block; color:#b57b17; }
+  #note-title { font-size:26px; }
+  #note-body { min-height:45vh; }
+  .tracker-panel table { min-width:740px; }
+  .tracker-panel .scroll th:first-child,.tracker-panel .scroll td:first-child { width:120px; max-width:120px; padding-left:9px; font-size:12px; }
+  .note-editing .topline,.note-editing main>header { display:none; }
+  .note-editing main { padding-top:12px; }
+  .note-editing .notes-app.note-selected .note-editor { min-height:calc(100dvh - 100px); }
+  .calendar .event-chip { font-size:0; width:7px; height:7px; padding:0; border:0; border-radius:50%; background:#4c98ac; }
+  .calendar button small { display:none; }
+}
