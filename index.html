@@ -12,9 +12,9 @@
     <div class="identity"><span class="avatar">А</span><span>Алинур</span></div>
   </div>
   <main>
-    <div class="topline"><a href="#home">Моё пространство</a><time id="today"></time></div>
+    <div class="topline"><a id="back" href="#home">← Все разделы</a><time id="today"></time></div>
     <header><div><p class="kicker" id="section-label">ТВОЁ ПРОСТРАНСТВО ДЛЯ РОСТА</p><h1 id="title"></h1></div><button id="primary" class="primary"></button></header>
-    <div class="tabs" aria-label="Экраны Core"><a href="#habits">Трекер</a><a href="#weekly">План недели</a><a href="#calendar">Календарь</a></div>
+    <div class="tabs" aria-label="Разделы основы"><a href="#habits">Трекер привычек</a><a href="#calendar">Календарь</a></div>
     <section class="toolbar"><h2 id="period"></h2><div class="controls"><button id="prev" aria-label="Предыдущий период">‹</button><button id="current">Сегодня</button><button id="next" aria-label="Следующий период">›</button></div></section>
     <section id="view" tabindex="-1"></section>
     <p id="status" role="status"></p>
@@ -24,7 +24,7 @@
     <div id="template-fields"><label for="template">Начать с шаблона</label><select id="template"></select></div>
     <label for="name">Название</label><input id="name" required maxlength="90" autocomplete="off">
     <div id="schedule-fields"><fieldset><legend>Дни недели</legend><div id="schedule"></div></fieldset></div>
-    <div id="task-fields"><label for="date">Дата</label><input type="date" id="date" min="1000-01-01" max="9999-12-31"></div>
+    <div id="task-fields"><label for="date">Дата</label><input type="date" id="date" min="1000-01-01" max="9999-12-31"><div id="event-time-fields"><label for="event-time">Время</label><input type="time" id="event-time" value="09:00"></div></div>
     <button type="submit" class="primary">Сохранить</button>
   </form></dialog>
 </body></html>

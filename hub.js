@@ -1,5 +1,5 @@
 const modules = [
-  { id: 'habits', title: 'Core', subtitle: 'Ритм твоего дня', description: 'Привычки, планы и календарь. Всё, чтобы сделать следующий шаг.', color: 'mint', art: 'checks', features: ['Привычки', 'План недели', 'Календарь'] },
+  { id: 'habits', title: 'Основа', subtitle: 'Ритм твоего дня', description: 'Отмечай привычки и сохраняй важные события.', color: 'mint', art: 'checks', features: ['Привычки', 'Календарь'] },
   { id: 'analytics', title: 'Аналитика', subtitle: 'Замечай закономерности', description: 'Посмотри, как прошла неделя и какие привычки даются легче.', color: 'blue', art: 'bars', features: ['Обзор недели', 'По привычкам'] },
   { id: 'progress', title: 'Прогресс', subtitle: 'Маленькие шаги видны', description: 'Твои выполненные действия складываются в историю роста.', color: 'peach', art: 'rings', features: ['Выполнения', 'Личный результат'] },
   { id: 'streak', title: 'Streak', subtitle: 'Продолжай в своём темпе', description: 'Серии и возвращение к привычкам после перерыва.', color: 'lavender', art: 'streak', planned: true },
@@ -26,7 +26,7 @@ function illustration(type) {
 }
 
 function homeScreen() {
-  return '<p class="home-intro">Выбери, чему уделить время сегодня.</p><div class="module-grid">'+modules.map(module=>
+  return '<div class="module-grid">'+modules.map(module=>
     '<a class="module-card '+module.color+'" href="#'+module.id+'"><div class="card-art" aria-hidden="true">'+illustration(module.art)+'</div><div class="card-copy"><p class="card-subtitle">'+module.subtitle+'</p><h2>'+module.title+'</h2><p>'+module.description+'</p><div class="card-foot"><span>'+(module.planned?'Посмотреть идею':'Открыть раздел')+'</span>'+(module.planned?'<small>В планах</small>':'<span class="open-circle" aria-hidden="true">＋</span>')+'</div></div></a>').join('')+'</div>';
 }
 
@@ -53,5 +53,5 @@ function progressScreen() {
 }
 
 function plannedScreen(module) {
-  return '<div class="concept '+module.color+'"><div class="card-art" aria-hidden="true">'+illustration(module.art)+'</div><div><span class="planned-label">Раздел в планах</span><h2>'+module.subtitle+'</h2><p>'+module.description+'</p><p class="muted">Сейчас можно начать с привычек и плана недели в Core.</p><a class="primary inline-button" href="#habits">Открыть Core</a></div></div>';
+  return '<div class="concept '+module.color+'"><div class="card-art" aria-hidden="true">'+illustration(module.art)+'</div><div><span class="planned-label">Раздел в планах</span><h2>'+module.subtitle+'</h2><p>'+module.description+'</p><p class="muted">Сейчас можно начать с привычек и календаря в разделе «Основа».</p><a class="primary inline-button" href="#habits">Открыть основу</a></div></div>';
 }
