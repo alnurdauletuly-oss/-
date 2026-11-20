@@ -339,3 +339,109 @@ form input:not([type=checkbox]), select { background: #f6f8f9; padding: 12px; }
   .calendar .event-chip { font-size:0; width:7px; height:7px; padding:0; border:0; border-radius:50%; background:#4c98ac; }
   .calendar button small { display:none; }
 }
+
+/* Daily journal */
+.home-page .module-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.journal-art { width:100%; max-width:240px; padding:15px; background:#fffdf9; border-radius:15px; box-shadow:0 12px 30px #9b714322; transform:rotate(-3deg) scale(.84) !important; }
+.journal-art>span { display:block; font-size:11px; color:#9b7a55; margin-bottom:8px; }
+.journal-art>div { padding:4px 0; border-bottom:1px solid #efe8df; font-size:15px; }
+.journal-art b { font-size:12px; margin-left:8px; }
+.journal-art small { display:block; margin-top:9px; font-size:10px; color:#ab8a66; }
+.mind-art { width:245px; max-width:100%; display:flex; align-items:center; color:#634f94; font-size:12px; transform:scale(.86) !important; }
+.mind-art>span { padding:12px; background:#fff; border-radius:12px; white-space:nowrap; box-shadow:0 8px 25px #684fa820; }
+.mind-art>i { flex:1; min-width:18px; height:3px; background:#a589d3; }
+.mind-art>div { display:grid; gap:8px; }
+.mind-art b { background:#fff; border-left:3px solid #a589d3; border-radius:7px; padding:7px; font-size:11px; white-space:nowrap; }
+.journal-layout { display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:18px; align-items:start; }
+.journal-main,.journal-side { background:white; border:1px solid var(--line); border-radius:20px; box-shadow:0 8px 30px #1b314006; }
+.journal-main { padding:24px; }
+.journal-datebar { display:flex; align-items:center; gap:12px; padding-bottom:22px; border-bottom:1px solid var(--line); }
+.journal-datebar>div { flex:1; min-width:0; }
+.journal-datebar>div span { color:#b98145; font-size:11px; letter-spacing:.15em; font-weight:800; }
+.journal-datebar h2 { font-size:23px; }
+.journal-datebar button { width:40px; height:40px; padding:0; flex:none; }
+.journal-datebar input { border:1px solid var(--line); border-radius:9px; padding:8px; max-width:145px; color:var(--text); }
+.journal-vitals { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:22px 0; }
+.journal-field { background:#f9faf8; border:1px solid #eef0ed; border-radius:15px; padding:18px; }
+.journal-field label,.field-label { display:block; font-weight:700; font-size:14px; margin-bottom:13px; }
+.sleep-input { display:flex; align-items:center; gap:8px; }
+.sleep-input input { width:82px; border:1px solid #e2e7e3; border-radius:9px; padding:9px; background:white; font-size:22px; font-weight:700; color:var(--text); }
+.sleep-input span { color:var(--muted); }
+.energy-options { display:flex; gap:7px; }
+.energy-options button { width:40px; height:40px; padding:0; border-radius:11px; }
+.energy-options button.active { background:#f5cc79; border-color:#e6b150; color:#553d12; font-weight:800; }
+.mood-field { margin-bottom:22px; }
+.mood-options { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+.mood-options button { display:grid; justify-items:center; gap:5px; padding:10px 4px; background:white; }
+.mood-options button.active { background:#fff0d5; border-color:#e8bd75; box-shadow:0 0 0 2px #f7d797; }
+.mood-options button span { font-size:27px; }
+.mood-options button small { font-size:11px; color:#79847a; }
+.reflection-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.reflection-card { display:flex; flex-direction:column; gap:12px; background:#fffdf9; border:1px solid #efe9df; border-radius:15px; padding:17px; font-size:15px; font-weight:700; }
+.reflection-card.wide { grid-column:1/-1; }
+.reflection-card textarea { border:0; outline:none; min-height:115px; resize:vertical; background:transparent; color:var(--text); font-family:inherit; font-size:15px; line-height:1.5; font-weight:400; }
+.reflection-card.wide textarea { min-height:150px; }
+.journal-save { margin-top:14px; text-align:right; color:#8c9a90; font-size:12px; }
+.journal-side { position:static; height:auto; overflow:visible; padding:21px; display:block; }
+.journal-side-title { display:flex; align-items:center; gap:8px; }
+.journal-side-title>span { font-size:25px; }
+.journal-side p { font-size:13px; color:var(--muted); margin-top:9px; }
+.journal-week { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin:18px 0; }
+.journal-week button { border:0; border-radius:9px; padding:5px 0; display:grid; justify-items:center; gap:3px; }
+.journal-week button.selected { background:#f9eacd; }
+.journal-week span,.journal-week small { font-size:10px; color:var(--muted); }
+.journal-week b { font-size:19px; }
+.journal-hint { background:#fff7e9; border-radius:14px; padding:15px; font-size:13px; }
+.journal-hint p { margin-top:7px; }
+
+/* Mind map canvas */
+.mind-workspace { background:white; border:1px solid var(--line); border-radius:20px; overflow:hidden; }
+.mind-topbar { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:15px 20px; }
+.mind-topbar label { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:10px; }
+.mind-topbar select { width:auto; min-width:180px; padding:8px 10px; background:#f7f6fb; }
+.mind-topbar #mind-map-name { flex:1; max-width:320px; min-width:150px; padding:9px 11px; border:1px solid var(--line); border-radius:9px; }
+.mind-canvas { min-height:440px; background:#f8f7fc; border-block:1px solid #e7e3f0; }
+.mind-canvas-head { display:flex; justify-content:space-between; gap:10px; padding:14px 20px; color:#8b79a5; font-size:12px; }
+.mind-tree-scroll { overflow:auto; padding:26px 30px 50px; }
+.mind-tree { display:flex; align-items:center; min-width:max-content; }
+.mind-node-row { display:flex; align-items:center; }
+.mind-tree>.mind-node-row::after { content:""; display:block; width:44px; height:3px; background:#b6a5d0; }
+.mind-tree>.mind-children { margin-left:0; }
+.mind-node { padding:12px 17px; border:2px solid transparent; border-radius:13px; background:#fff; color:#3d3850; box-shadow:0 8px 22px #5f4c7d12; font-weight:700; white-space:nowrap; }
+.mind-node.selected { border-color:#8a67c4; background:#f2ebff; }
+.mind-node.root-node { background:#7655ae; color:white; font-size:19px; padding:20px 25px; }
+.mind-node.root-node.selected { border-color:#c7abe9; box-shadow:0 0 0 4px #d8c3f5; }
+.mind-children { list-style:none; margin:0 0 0 44px; padding:0; position:relative; }
+.mind-children>li { position:relative; padding:9px 0 9px 35px; border-left:3px solid var(--branch,#b6a5d0); }
+.mind-children>li::before { content:""; width:35px; height:3px; background:var(--branch,#b6a5d0); position:absolute; left:0; top:50%; }
+.mind-children>li:first-child { border-top-left-radius:24px; }
+.mind-children>li:last-child { border-bottom-left-radius:24px; }
+.mind-tools { padding:18px 20px 20px; }
+.mind-selection { display:flex; align-items:center; gap:12px; }
+.mind-selection label { color:var(--muted); font-size:12px; white-space:nowrap; }
+.mind-selection input { flex:1; padding:10px 12px; border:1px solid var(--line); border-radius:10px; min-width:0; }
+.mind-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.mind-actions button { background:#f6f3fb; border-color:#ebe3f5; color:#674b98; }
+.mind-actions button:last-child { background:#fff5f4; color:#aa5a58; border-color:#f2dfdd; }
+.mind-tip { margin-top:13px; color:var(--muted); font-size:12px; }
+kbd { display:inline-block; border:1px solid #d9d9df; border-radius:5px; padding:1px 5px; background:#fff; color:#5b5e66; font:inherit; }
+
+@media(max-width:900px) { .home-page .module-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .journal-layout { grid-template-columns:1fr; } }
+@media(max-width:600px) {
+  .journal-main { padding:14px; }
+  .journal-datebar { flex-wrap:wrap; }
+  .journal-datebar h2 { font-size:18px; }
+  .journal-datebar input { max-width:none; width:100%; }
+  .journal-vitals { grid-template-columns:1fr; gap:10px; }
+  .mood-options { gap:4px; }
+  .mood-options button { padding:7px 2px; }
+  .mood-options button span { font-size:23px; }
+  .mood-options button small { font-size:9px; }
+  .reflection-grid { grid-template-columns:1fr; }
+  .reflection-card.wide { grid-column:auto; }
+  .mind-topbar { flex-wrap:wrap; }
+  .mind-topbar label,.mind-topbar select { width:100%; }
+  .mind-topbar #mind-map-name { max-width:none; width:100%; }
+  .mind-tree-scroll { padding:20px 15px 35px; }
+  .mind-actions button { flex:1 1 42%; }
+}

@@ -8,7 +8,7 @@ today.setHours(12, 0, 0, 0);
 let focusDate = new Date(today);
 let screen;
 let editorType;
-let state = { habits: [], tasks: [], events: [], notes: [] };
+let state = { habits: [], tasks: [], events: [], notes: [], journal: {}, maps: [] };
 let activeNoteId = null;
 let noteQuery = '';
 
@@ -46,7 +46,7 @@ function save() {
 }
 try {
   const saved = JSON.parse(localStorage.getItem(storageKey));
-  if (saved && Array.isArray(saved.habits) && Array.isArray(saved.tasks)) state={...saved, events:Array.isArray(saved.events)?saved.events:[], notes:Array.isArray(saved.notes)?saved.notes:[]};
+  if (saved && Array.isArray(saved.habits) && Array.isArray(saved.tasks)) state={...saved, events:Array.isArray(saved.events)?saved.events:[], notes:Array.isArray(saved.notes)?saved.notes:[], journal:saved.journal&&typeof saved.journal==='object'?saved.journal:{}, maps:Array.isArray(saved.maps)?saved.maps:[]};
   else { seed(); save(); }
 } catch { seed(); $('status').textContent='Открыт пример недели.'; }
 
@@ -177,7 +177,9 @@ function render() {
     habits: () => habitTable(days),
     calendar,
     analytics: () => analyticsScreen(days),
-    notes: notesScreen
+    notes: notesScreen,
+    journal: journalScreen,
+    mind: mindScreen
   };
   $('view').innerHTML = views[screen] ? views[screen]() : plannedScreen(module);
   document.title = $('title').textContent + ' · JOSPAT';
@@ -241,6 +243,8 @@ $('entry').onsubmit=e=>{
 $('view').onclick=e=>{
   const button=e.target.closest('button');
   if(!button)return;
+  if(journalClick(button))return;
+  if(mindClick(button))return;
   if(button.hasAttribute('data-new-note'))newNote();
   if(button.hasAttribute('data-note')){activeNoteId=button.dataset.note;render();}
   if(button.hasAttribute('data-note-back')){activeNoteId=null;render();}
@@ -258,6 +262,12 @@ $('view').onclick=e=>{
   if(button.dataset.day){focusDate=new Date(button.dataset.day+'T12:00:00');render();}
 };
 $('view').addEventListener('input',e=>{
+  if(e.target.id==='journal-sleep'){
+    const value=e.target.value===''?'':Math.max(0,Math.min(24,Number(e.target.value)));
+    journalUpdate('sleep',value);
+  }
+  if(e.target.dataset.journalField)journalUpdate(e.target.dataset.journalField,e.target.value);
+  if(mindInput(e.target))return;
   if(e.target.id==='note-search'){
     noteQuery=e.target.value;
     const position=e.target.selectionStart;
@@ -270,6 +280,11 @@ $('view').addEventListener('input',e=>{
     note.updated=new Date().toISOString();save();
   }
 });
+$('view').addEventListener('change',e=>{
+  if(e.target.id==='journal-date'&&e.target.value){journalDate=new Date(e.target.value+'T12:00:00');render();}
+  if(e.target.id==='mind-map-select')mindChooseMap(e.target.value);
+});
+$('view').addEventListener('keydown',e=>mindKeydown(e));
 $('view').addEventListener('submit',e=>{
   if(e.target.id!=='quick-habit')return;
   e.preventDefault();

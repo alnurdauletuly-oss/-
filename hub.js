@@ -2,7 +2,9 @@ const modules = [
   { id: 'habits', title: 'Основа', subtitle: 'Ритм твоего дня', description: 'Отмечай привычки и сохраняй важные события.', color: 'mint', art: 'checks', features: ['Привычки', 'Календарь'] },
   { id: 'analytics', title: 'Аналитика', subtitle: 'Замечай закономерности', description: 'Динамика по дням и привычки, которые идут легче.', color: 'blue', art: 'bars', features: ['Обзор недели', 'По привычкам'] },
   { id: 'notes', title: 'Заметки', subtitle: 'Сохрани свои мысли', description: 'Запиши идею, план или маленькую победу.', color: 'sand', art: 'note' },
-  { id: 'goals', title: 'Цели', subtitle: 'Держи важное в фокусе', description: 'Соедини большую цель с ежедневными действиями.', color: 'rose', art: 'goal', planned: true }
+  { id: 'goals', title: 'Цели', subtitle: 'Держи важное в фокусе', description: 'Соедини большую цель с ежедневными действиями.', color: 'rose', art: 'goal', planned: true },
+  { id: 'journal', title: 'Дневник', subtitle: 'Пойми свой день', description: 'Сон, настроение, энергия и мысли — в одной записи.', color: 'peach', art: 'journal' },
+  { id: 'mind', title: 'Карта мыслей', subtitle: 'Mind Space', description: 'Преврати идею в понятные ветки и следующие шаги.', color: 'lavender', art: 'mind' }
 ];
 
 function illustration(type) {
@@ -12,7 +14,9 @@ function illustration(type) {
         '<div class="mini-row"><span>'+name+'</span>'+Array.from({length:5},(_,i)=>'<i class="'+(i<4-row?'filled':'')+'">'+(i<4-row?'✓':'')+'</i>').join('')+'</div>').join('')+'</div>',
     bars: '<div class="mini-chart"><div class="mini-title">Твой ритм</div><div class="bars">'+[42,70,52,86,65,100,78].map((n,i)=>'<div><i style="--height:'+n+'%"></i><span>'+weekdays[i]+'</span></div>').join('')+'</div></div>',
     goal: '<div class="goal-art"><div class="target"><div><div></div></div></div><span>Моя цель</span></div>',
-    note: '<div class="paper"><span>Сегодня получилось…</span><i></i><i></i><i></i><b>✧</b></div>'
+    note: '<div class="paper"><span>Сегодня получилось…</span><i></i><i></i><i></i><b>✧</b></div>',
+    journal: '<div class="journal-art"><span>Пятница, 20 ноября</span><div>😴 <b>8 ч сна</b></div><div>⚡ <b>Энергия 4/5</b></div><div>🙂 <b>Настроение</b></div><small>Сегодня я благодарен за…</small></div>',
+    mind: '<div class="mind-art"><span>💡 Моя идея</span><i></i><div><b>🎯 Цель</b><b>🚀 Первый шаг</b><b>✨ Результат</b></div></div>'
   };
   return pictures[type];
 }
