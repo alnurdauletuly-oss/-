@@ -2,7 +2,7 @@ const modules = [
   { id: 'habits', title: 'Основа', subtitle: 'Ритм твоего дня', description: 'Отмечай привычки и сохраняй важные события.', color: 'mint', art: 'checks', features: ['Привычки', 'Календарь'] },
   { id: 'analytics', title: 'Аналитика', subtitle: 'Замечай закономерности', description: 'Динамика по дням и привычки, которые идут легче.', color: 'blue', art: 'bars', features: ['Обзор недели', 'По привычкам'] },
   { id: 'notes', title: 'Заметки', subtitle: 'Сохрани свои мысли', description: 'Запиши идею, план или маленькую победу.', color: 'sand', art: 'note' },
-  { id: 'goals', title: 'Цели', subtitle: 'Держи важное в фокусе', description: 'Соедини большую цель с ежедневными действиями.', color: 'rose', art: 'goal', planned: true },
+  { id: 'goals', title: 'Цели', subtitle: 'Держи важное в фокусе', description: 'Соедини большую цель с конкретными шагами.', color: 'rose', art: 'goal' },
   { id: 'journal', title: 'Дневник', subtitle: 'Пойми свой день', description: 'Сон, настроение, энергия и мысли — в одной записи.', color: 'peach', art: 'journal' },
   { id: 'mind', title: 'Карта мыслей', subtitle: 'Mind Space', description: 'Преврати идею в понятные ветки и следующие шаги.', color: 'lavender', art: 'mind' }
 ];

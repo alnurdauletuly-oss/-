@@ -8,7 +8,7 @@ today.setHours(12, 0, 0, 0);
 let focusDate = new Date(today);
 let screen;
 let editorType;
-let state = { habits: [], tasks: [], events: [], notes: [], journal: {}, maps: [] };
+let state = { habits: [], tasks: [], events: [], notes: [], journal: {}, maps: [], goals: [] };
 let activeNoteId = null;
 let noteQuery = '';
 
@@ -46,7 +46,7 @@ function save() {
 }
 try {
   const saved = JSON.parse(localStorage.getItem(storageKey));
-  if (saved && Array.isArray(saved.habits) && Array.isArray(saved.tasks)) state={...saved, events:Array.isArray(saved.events)?saved.events:[], notes:Array.isArray(saved.notes)?saved.notes:[], journal:saved.journal&&typeof saved.journal==='object'?saved.journal:{}, maps:Array.isArray(saved.maps)?saved.maps:[]};
+  if (saved && Array.isArray(saved.habits) && Array.isArray(saved.tasks)) state={...saved, events:Array.isArray(saved.events)?saved.events:[], notes:Array.isArray(saved.notes)?saved.notes:[], journal:saved.journal&&typeof saved.journal==='object'?saved.journal:{}, maps:Array.isArray(saved.maps)?saved.maps:[], goals:Array.isArray(saved.goals)?saved.goals:[]};
   else { seed(); save(); }
 } catch { seed(); $('status').textContent='Открыт пример недели.'; }
 
@@ -150,6 +150,7 @@ function render() {
   const isHome = screen === 'home';
   document.body.classList.toggle('home-page', isHome);
   document.body.classList.toggle('notes-page', screen==='notes');
+  document.body.classList.toggle('mind-page', screen==='mind');
   document.body.classList.toggle('note-editing', screen==='notes' && !!activeNoteId);
   $('back').hidden=isHome;
   document.querySelector('.home-link').hidden=isHome;
@@ -179,7 +180,8 @@ function render() {
     analytics: () => analyticsScreen(days),
     notes: notesScreen,
     journal: journalScreen,
-    mind: mindScreen
+    mind: mindScreen,
+    goals: goalsScreen
   };
   $('view').innerHTML = views[screen] ? views[screen]() : plannedScreen(module);
   document.title = $('title').textContent + ' · JOSPAT';
@@ -245,6 +247,7 @@ $('view').onclick=e=>{
   if(!button)return;
   if(journalClick(button))return;
   if(mindClick(button))return;
+  if(goalsClick(button))return;
   if(button.hasAttribute('data-new-note'))newNote();
   if(button.hasAttribute('data-note')){activeNoteId=button.dataset.note;render();}
   if(button.hasAttribute('data-note-back')){activeNoteId=null;render();}
@@ -268,6 +271,7 @@ $('view').addEventListener('input',e=>{
   }
   if(e.target.dataset.journalField)journalUpdate(e.target.dataset.journalField,e.target.value);
   if(mindInput(e.target))return;
+  if(goalsInput(e.target))return;
   if(e.target.id==='note-search'){
     noteQuery=e.target.value;
     const position=e.target.selectionStart;
@@ -285,7 +289,9 @@ $('view').addEventListener('change',e=>{
   if(e.target.id==='mind-map-select')mindChooseMap(e.target.value);
 });
 $('view').addEventListener('keydown',e=>mindKeydown(e));
+$('view').addEventListener('dblclick',e=>{if(e.target.closest('[data-mind-node]'))mindEdit();});
 $('view').addEventListener('submit',e=>{
+  if(goalsSubmit(e))return;
   if(e.target.id!=='quick-habit')return;
   e.preventDefault();
   const name=$('quick-name').value.trim();
@@ -295,6 +301,7 @@ $('view').addEventListener('submit',e=>{
 });
 $('view').onchange=e=>{
   const box=e.target;
+  if(goalsChange(box))return;
   if(box.dataset.habit){
     const habit=state.habits.find(h=>h.id===box.dataset.habit);
     const date=box.dataset.date;
