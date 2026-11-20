@@ -90,19 +90,39 @@ function calendar() {
   return `<div class="calendar">${cells.join('')}</div><div class="detail">${dayCard(focusDate,true)}</div>`;
 }
 function render() {
-  const route=location.hash.slice(1);
-  screen=Object.hasOwn(screens,route)?route:'habits';
-  $('title').textContent=screens[screen];
-  $('primary').textContent=screen==='habits'?'＋ Привычка':'＋ Задача';
-  $('today').textContent=fmt(today,{weekday:'long',day:'numeric',month:'long'});
-  document.querySelectorAll('.children a,.tabs a').forEach(a=>{
-    const active=a.hash==='#'+screen;
-    a.classList.toggle('active-link',active);
-    if(active) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
+  const route = location.hash.slice(1);
+  const module = modules.find(item => item.id === route);
+  screen = Object.hasOwn(screens, route) || module ? route : 'home';
+  const isCore = Object.hasOwn(screens, screen);
+  const isHome = screen === 'home';
+  document.body.classList.toggle('home-page', isHome);
+  $('title').textContent = isHome ? 'Место для твоего роста.' : screens[screen] || module.title;
+  $('section-label').textContent = isHome ? 'ТВОЁ ПРОСТРАНСТВО' : isCore ? 'CORE · КАЖДЫЙ ДЕНЬ' : 'JOSPAT · ' + module.title.toUpperCase();
+  $('primary').hidden = !isCore;
+  document.querySelector('.tabs').hidden = !isCore;
+  document.querySelector('.toolbar').hidden = !isCore && screen !== 'analytics';
+  $('primary').textContent = screen === 'habits' ? '＋ Привычка' : '＋ Задача';
+  $('today').textContent = fmt(today, { weekday: 'long', day: 'numeric', month: 'long' });
+  document.querySelectorAll('.tabs a').forEach(link => {
+    const active = link.hash === '#' + screen;
+    link.classList.toggle('active-link', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
   });
-  const days=week(focusDate);
-  $('period').textContent=screen==='calendar'?fmt(focusDate,{month:'long',year:'numeric'}):short(days[0])+' — '+short(days[6])+' '+days[6].getFullYear();
-  $('view').innerHTML=screen==='calendar'?calendar():screen==='habits'?habitTable(days):`<div class="days">${days.map(d=>dayCard(d)).join('')}</div>`;
+  const days = week(focusDate);
+  $('period').textContent = screen === 'calendar'
+    ? fmt(focusDate, { month: 'long', year: 'numeric' })
+    : short(days[0]) + ' — ' + short(days[6]) + ' ' + days[6].getFullYear();
+  const views = {
+    home: homeScreen,
+    habits: () => habitTable(days),
+    weekly: () => '<div class="days">' + days.map(day => dayCard(day)).join('') + '</div>',
+    calendar,
+    analytics: () => analyticsScreen(days),
+    progress: progressScreen
+  };
+  $('view').innerHTML = views[screen] ? views[screen]() : plannedScreen(module);
+  document.title = $('title').textContent + ' · JOSPAT';
 }
 function move(direction) {
   if(screen==='calendar') focusDate=new Date(focusDate.getFullYear(),focusDate.getMonth()+direction,1,12);
@@ -171,5 +191,8 @@ $('view').onchange=e=>{
   const selector=box.dataset.habit?`[data-habit="${CSS.escape(box.dataset.habit)}"][data-date="${box.dataset.date}"]`:`[data-task="${CSS.escape(box.dataset.task)}"]`;
   save();render();$('view').querySelector(selector)?.focus({preventScroll:true});
 };
-window.addEventListener('hashchange',render);
+window.addEventListener('hashchange', () => {
+  render();
+  window.scrollTo(0, 0);
+});
 render();
