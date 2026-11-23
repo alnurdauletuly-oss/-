@@ -129,17 +129,23 @@ function dayCard(date, includeHabits=false) {
 function calendar() {
   const first=new Date(focusDate.getFullYear(),focusDate.getMonth(),1,12);
   const last=new Date(first.getFullYear(),first.getMonth()+1,0,12);
+  const steps = goalSteps();
   const cells=weekdays.map(d=>`<div class="weekday">${d}</div>`);
   for (let i=0;i<weekday(first);i++) cells.push('<div class="calendar-blank"></div>');
   for (let n=1;n<=last.getDate();n++) {
     const date=shift(first,n-1), day=key(date);
     const events=state.events.filter(event=>event.date===day).sort((a,b)=>a.time.localeCompare(b.time));
     const tasks=state.tasks.filter(task=>task.date===day);
-    cells.push(`<button class="${day===key(focusDate)?'chosen':''} ${day===key(today)?'is-today':''}" data-day="${day}" aria-label="${short(date)}, событий: ${events.length}"><span class="calendar-date">${n}</span>${events.slice(0,3).map(event=>`<span class="event-chip">${safe(event.time)} ${safe(event.name)}</span>`).join('')}${events.length>3?`<small>Ещё ${events.length-3}</small>`:''}${tasks.length?`<small>Задачи: ${tasks.length}</small>`:''}</button>`);
+    const daySteps = steps.filter(({ step }) => step.date === day);
+    cells.push(`<button class="${day===key(focusDate)?'chosen':''} ${day===key(today)?'is-today':''}" data-day="${day}" aria-label="${short(date)}, событий: ${events.length}, шагов: ${daySteps.length}"><span class="calendar-date">${n}</span>${events.slice(0,3).map(event=>`<span class="event-chip">${safe(event.time)} ${safe(event.name)}</span>`).join('')}${events.length>3?`<small>Ещё ${events.length-3}</small>`:''}${tasks.length?`<small>Задачи: ${tasks.length}</small>`:''}${daySteps.length ? `<small class="calendar-goal-count">Шаги: ${daySteps.length}</small>` : ''}</button>`);
   }
   const selected=key(focusDate);
+  const selectedSteps = steps.filter(({step}) => step.date === selected);
+  const goalRows = selectedSteps.map(({goal, step}) => `<label class="calendar-task calendar-goal">
+    ${goalStepCheckbox(goal, step)}<span>${safe(step.text)}<small>${safe(goal.title)}</small></span>
+  </label>`).join('');
   const events=state.events.filter(event=>event.date===selected).sort((a,b)=>a.time.localeCompare(b.time));
-  return `<div class="calendar">${cells.join('')}</div><section class="panel calendar-detail"><div class="panel-head"><div><h2>${fmt(focusDate,{weekday:'long',day:'numeric',month:'long'})}</h2><small>Важные события и задачи этого дня</small></div><button class="primary" data-add-event="${selected}">＋ Событие</button></div><div class="event-list">${events.length?events.map(event=>`<div class="event-row"><time>${safe(event.time)}</time><span>${safe(event.name)}</span><button data-delete-event="${safe(event.id)}" aria-label="Удалить событие ${safe(event.name)}">×</button></div>`).join(''):'<p class="muted">Пока нет событий. Добавь важное на этот день.</p>'}</div>${state.tasks.filter(task=>task.date===selected).map(task=>`<label class="calendar-task"><input class="check" type="checkbox" data-task="${safe(task.id)}" ${task.done?'checked':''}>${safe(task.name)}</label>`).join('')}</section>`;
+  return `<div class="calendar">${cells.join('')}</div><section class="panel calendar-detail"><div class="panel-head"><div><h2>${fmt(focusDate,{weekday:'long',day:'numeric',month:'long'})}</h2><small>События, задачи и шаги к целям</small></div><button class="primary" data-add-event="${selected}">＋ Событие</button></div><div class="event-list">${events.length?events.map(event=>`<div class="event-row"><time>${safe(event.time)}</time><span>${safe(event.name)}</span><button data-delete-event="${safe(event.id)}" aria-label="Удалить событие ${safe(event.name)}">×</button></div>`).join(''):'<p class="muted">Пока нет событий. Добавь важное на этот день.</p>'}</div>${goalRows}${state.tasks.filter(task=>task.date===selected).map(task=>`<label class="calendar-task"><input class="check" type="checkbox" data-task="${safe(task.id)}" ${task.done?'checked':''}>${safe(task.name)}</label>`).join('')}</section>`;
 }
 function render() {
   const route = location.hash.slice(1);
@@ -153,11 +159,14 @@ function render() {
   document.body.classList.toggle('mind-page', screen==='mind');
   document.body.classList.toggle('note-editing', screen==='notes' && !!activeNoteId);
   $('back').hidden=isHome;
-  document.querySelector('.home-link').hidden=isHome;
+  const current = route === 'sections' ? 'sections' : screen;
+  document.querySelectorAll('.site-links a').forEach(link => {
+    if (link.hash === '#' + current) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+  $('title').closest('header').hidden = isHome;
   $('today').hidden=isHome;
-  $('title').textContent = isHome ? 'Место для твоего роста.' : screens[screen] || module.title;
-  $('section-label').textContent = isHome ? '' : isCore ? 'ОСНОВА · КАЖДЫЙ ДЕНЬ' : 'JOSPAT · ' + module.title.toUpperCase();
-  $('section-label').hidden=isHome;
+  $('title').textContent = isHome ? 'Сегодня' : screens[screen] || module.title;
   $('primary').hidden = !isCore && screen!=='notes';
   document.querySelector('.tabs').hidden = !isCore;
   document.querySelector('.toolbar').hidden = !isCore && screen !== 'analytics';
@@ -183,7 +192,7 @@ function render() {
     mind: mindScreen,
     goals: goalsScreen
   };
-  $('view').innerHTML = views[screen] ? views[screen]() : plannedScreen(module);
+  $('view').innerHTML = views[screen]();
   document.title = $('title').textContent + ' · JOSPAT';
 }
 function move(direction) {
@@ -245,6 +254,7 @@ $('entry').onsubmit=e=>{
 $('view').onclick=e=>{
   const button=e.target.closest('button');
   if(!button)return;
+  if(button.hasAttribute('data-today-start')) { focusTodayHabits(); return; }
   if(journalClick(button))return;
   if(mindClick(button))return;
   if(goalsClick(button))return;
@@ -271,7 +281,6 @@ $('view').addEventListener('input',e=>{
   }
   if(e.target.dataset.journalField)journalUpdate(e.target.dataset.journalField,e.target.value);
   if(mindInput(e.target))return;
-  if(goalsInput(e.target))return;
   if(e.target.id==='note-search'){
     noteQuery=e.target.value;
     const position=e.target.selectionStart;
@@ -315,6 +324,12 @@ $('view').onchange=e=>{
 };
 window.addEventListener('hashchange', () => {
   render();
-  window.scrollTo(0, 0);
+  if (location.hash === '#sections') focusSections();
+  else window.scrollTo(0, 0);
 });
+function focusSections() {
+  $('sections')?.focus({preventScroll:true});
+  $('sections')?.scrollIntoView();
+}
 render();
+if (location.hash === '#sections') requestAnimationFrame(focusSections);

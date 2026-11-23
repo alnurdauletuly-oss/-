@@ -1,10 +1,10 @@
 const modules = [
-  { id: 'habits', title: 'Основа', subtitle: 'Ритм твоего дня', description: 'Отмечай привычки и сохраняй важные события.', color: 'mint', art: 'checks', features: ['Привычки', 'Календарь'] },
+  { id: 'habits', title: 'Привычки', subtitle: 'Ритм твоего дня', description: 'Отметки и прогресс за неделю.', color: 'mint', art: 'checks', features: ['Привычки', 'Календарь'] },
   { id: 'analytics', title: 'Аналитика', subtitle: 'Замечай закономерности', description: 'Динамика по дням и привычки, которые идут легче.', color: 'blue', art: 'bars', features: ['Обзор недели', 'По привычкам'] },
   { id: 'notes', title: 'Заметки', subtitle: 'Сохрани свои мысли', description: 'Запиши идею, план или маленькую победу.', color: 'sand', art: 'note' },
   { id: 'goals', title: 'Цели', subtitle: 'Держи важное в фокусе', description: 'Соедини большую цель с конкретными шагами.', color: 'rose', art: 'goal' },
   { id: 'journal', title: 'Дневник', subtitle: 'Пойми свой день', description: 'Сон, настроение, энергия и мысли — в одной записи.', color: 'peach', art: 'journal' },
-  { id: 'mind', title: 'Карта мыслей', subtitle: 'Mind Space', description: 'Преврати идею в понятные ветки и следующие шаги.', color: 'lavender', art: 'mind' }
+  { id: 'mind', title: 'Карта мыслей', subtitle: 'Идеи по веткам', description: 'Преврати идею в понятные ветки и следующие шаги.', color: 'lavender', art: 'mind' }
 ];
 
 function illustration(type) {
@@ -22,8 +22,11 @@ function illustration(type) {
 }
 
 function homeScreen() {
-  return '<div class="module-grid">'+modules.map(module=>
-    '<a class="module-card '+module.color+'" href="#'+module.id+'"><div class="card-art" aria-hidden="true">'+illustration(module.art)+'</div><div class="card-copy"><p class="card-subtitle">'+module.subtitle+'</p><h2>'+module.title+'</h2><p>'+module.description+'</p><div class="card-foot"><span>'+(module.planned?'Посмотреть идею':'Открыть раздел')+'</span>'+(module.planned?'<small>В планах</small>':'<span class="open-circle" aria-hidden="true">＋</span>')+'</div></div></a>').join('')+'</div>';
+  return todayScreen() + `<section class="today-library" id="sections" tabindex="-1" aria-labelledby="sections-title"><h2 id="sections-title">Все разделы</h2><div class="module-grid">${modules.map(module => `
+    <a class="module-card ${module.color}" href="#${module.id}">
+      <div class="card-art" aria-hidden="true">${illustration(module.art)}</div>
+      <div class="card-copy"><h3>${module.title}</h3><p>${module.description}</p></div>
+    </a>`).join('')}</div></section>`;
 }
 
 function analyticsScreen(days) {
@@ -39,9 +42,5 @@ function analyticsScreen(days) {
     const count=target.filter(date=>habit.done.includes(key(date))).length;
     const share=target.length?Math.round(count/target.length*100):0;
     return `<div class="breakdown-row"><span>${safe(habit.name)}</span><progress max="100" value="${share}"></progress><b>${share}%</b></div>`;
-  }).join(''):'<p class="muted">Добавь первую привычку в «Основе».</p>'}</section>`;
-}
-
-function plannedScreen(module) {
-  return '<div class="concept '+module.color+'"><div class="card-art" aria-hidden="true">'+illustration(module.art)+'</div><div><span class="planned-label">Раздел в планах</span><h2>'+module.subtitle+'</h2><p>'+module.description+'</p><p class="muted">Сейчас можно начать с привычек и календаря в разделе «Основа».</p><a class="primary inline-button" href="#habits">Открыть основу</a></div></div>';
+  }).join(''):'<p class="muted">Добавь первую привычку в разделе «Привычки».</p>'}</section>`;
 }
