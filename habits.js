@@ -89,6 +89,42 @@ function victorySeries(dates) {
   </section>`;
 }
 
+function mobileHabits(dates, rows) {
+  const selected = key(focusDate);
+  const current = key(today);
+  const {done, planned} = dailyProductivity(focusDate);
+  const days = dates.map(date => {
+    const day = key(date);
+    const progress = dailyProductivity(date);
+    return `<button type="button" data-habit-day="${day}" aria-pressed="${day === selected}" ${day === current ? 'aria-current="date"' : ''}
+      aria-label="${short(date)}, ${progress.done} из ${progress.planned} выполнено">
+      <small>${weekdays[weekday(date)]}</small><strong>${date.getDate()}</strong>
+      <span aria-hidden="true" class="habit-day-dot ${progress.planned && progress.done === progress.planned ? 'all-done' : progress.done ? 'some-done' : ''}"></span>
+    </button>`;
+  }).join('');
+  const list = rows.filter(({habit}) => habitScheduled(habit, focusDate) || habitPaused(habit, selected)).map(({habit, color, streak}) => {
+    const paused = habitPaused(habit, selected);
+    const checked = habit.done.includes(selected);
+    const name = safe(habit.name);
+    const id = safe(habit.id);
+    const title = `<span class="mobile-habit-title"><strong>${name}</strong>${habit.description ? `<small>${safe(habit.description)}</small>` : ''}${paused ? '<small class="habit-paused">На паузе</small>' : ''}</span>`;
+    return `<li class="mobile-habit" style="--habit-color:${color}">
+      ${paused ? `<div class="mobile-habit-mark"><span aria-hidden="true" class="habit-paused">Ⅱ</span>${title}</div>` :
+        `<label class="mobile-habit-mark"><input class="check" type="checkbox" data-habit="${id}" data-date="${selected}" ${checked ? 'checked' : ''}>${title}</label>`}
+      <div class="mobile-habit-actions">
+        ${streak ? `<span class="habit-streak is-lit" aria-label="Серия: ${streak}"><span aria-hidden="true">🔥</span> ${streak}</span>` : ''}
+        ${selected === current && !checked ? `<button type="button" data-habit-pause="${id}" aria-label="${paused ? 'Возобновить' : 'Пауза на сегодня'} — ${name}">${paused ? 'Возобновить' : 'Пауза'}</button>` : ''}
+        <button type="button" data-habit-edit="${id}" aria-label="Изменить привычку: ${name}">⋯</button>
+      </div>
+    </li>`;
+  }).join('');
+  return `<section class="mobile-habits" aria-label="Привычки по дням">
+    <div class="mobile-habit-days ${dates.length > 7 ? 'is-month' : ''}" style="--month-start:${weekday(dates[0]) + 1}" aria-label="Дни периода">${days}</div>
+    <div class="mobile-habit-summary"><h2>${selected === current ? 'Сегодня' : short(focusDate)}</h2><span>${done} из ${planned}</span></div>
+    ${list ? `<ul class="mobile-habit-list">${list}</ul>` : '<p class="orbit-empty">На этот день нет привычек.</p>'}
+  </section>`;
+}
+
 function habitsScreen() {
   const dates = habitDates();
   const rows = state.habits.map((habit,index) => ({habit, color:habitColor(habit,index), ...habitSummary(habit,dates)}));
@@ -103,6 +139,7 @@ function habitsScreen() {
   return `<section class="panel orbit-panel">
     <div class="orbit-tools"><div class="orbit-range" aria-label="Период">${[['week','Неделя'],['month','Месяц']].map(([range,label]) => `<button type="button" data-habit-range="${range}" aria-pressed="${habitRange === range}">${label}</button>`).join('')}</div>
     <label>Порядок <select id="habit-order" aria-label="Сортировка привычек">${[['added','По добавлению'],['name','По названию'],['progress','По выполнению'],['streak','По серии']].map(([value,label]) => `<option value="${value}" ${habitOrder === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label></div>
+    ${rows.length ? mobileHabits(dates, rows) : ''}
     ${rows.length ? `<div class="orbit-scroll" id="orbit-scroll"><table class="orbit-table" aria-label="Отметки привычек по дням">
       <thead><tr><th scope="col" class="habit-name">Привычка</th>${dates.map(date => `<th scope="col" class="habit-day ${key(date)===key(today) ? 'is-today' : ''}">${date.getDate()}<small>${weekdays[weekday(date)]}</small></th>`).join('')}<th scope="col" class="habit-score">Серия и итог</th></tr></thead>
       <tbody>${rows.map(row => habitRow(row,dates)).join('')}</tbody>
@@ -124,6 +161,12 @@ function habitsClick(button) {
     habitRange = range;
     render();
     $('view').querySelector(`[data-habit-range="${range}"]`)?.focus({preventScroll:true});
+    return true;
+  }
+  if (button.dataset.habitDay) {
+    focusDate = new Date(button.dataset.habitDay + 'T12:00:00');
+    render();
+    $('view').querySelector('[data-habit-day][aria-pressed="true"]')?.focus({preventScroll:true});
     return true;
   }
   const paused = button.dataset.habitPause;

@@ -1,7 +1,7 @@
 let activeMapId = null;
 let selectedMindNodeId = null;
 const mindColors = ['#bbf029', '#63d9ca', '#a296ff', '#ffac7c', '#ef91bb', '#80baff'];
-let mindMode = 'map';
+let mindMode = matchMedia('(max-width: 700px)').matches ? 'outline' : 'map';
 let mindZoom = 1;
 let mindEntrance = true;
 const mindCollapsed = new Set();

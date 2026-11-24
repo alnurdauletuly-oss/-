@@ -99,7 +99,7 @@ function calendar() {
     const events=state.events.filter(event=>event.date===day).sort((a,b)=>a.time.localeCompare(b.time));
     const tasks=state.tasks.filter(task=>task.date===day);
     const daySteps = steps.filter(({ step }) => step.date === day);
-    cells.push(`<button class="${day===key(focusDate)?'chosen':''} ${day===key(today)?'is-today':''}" data-day="${day}" aria-label="${short(date)}, событий: ${events.length}, шагов: ${daySteps.length}"><span class="calendar-date">${n}</span>${events.slice(0,3).map(event=>`<span class="event-chip">${safe(event.time)} ${safe(event.name)}</span>`).join('')}${events.length>3?`<small>Ещё ${events.length-3}</small>`:''}${tasks.length?`<small>Задачи: ${tasks.length}</small>`:''}${daySteps.length ? `<small class="calendar-goal-count">Шаги: ${daySteps.length}</small>` : ''}</button>`);
+    cells.push(`<button aria-pressed="${day===key(focusDate)}" class="${day===key(focusDate)?'chosen':''} ${day===key(today)?'is-today':''}" data-day="${day}" aria-label="${short(date)}, событий: ${events.length}, задач: ${tasks.length}, шагов: ${daySteps.length}"><span class="calendar-date">${n}</span>${events.slice(0,3).map(event=>`<span class="event-chip">${safe(event.time)} ${safe(event.name)}</span>`).join('')}${events.length>3?`<small>Ещё ${events.length-3}</small>`:''}${tasks.length?`<small>Задачи: ${tasks.length}</small>`:''}${daySteps.length ? `<small class="calendar-goal-count">Шаги: ${daySteps.length}</small>` : ''}</button>`);
   }
   const selected=key(focusDate);
   const selectedSteps = steps.filter(({step}) => step.date === selected);
@@ -107,7 +107,7 @@ function calendar() {
     ${goalStepCheckbox(goal, step)}<span>${safe(step.text)}<small>${safe(goal.title)}</small></span>
   </label>`).join('');
   const events=state.events.filter(event=>event.date===selected).sort((a,b)=>a.time.localeCompare(b.time));
-  return `<div class="calendar">${cells.join('')}</div><section class="panel calendar-detail"><div class="panel-head"><div><h2>${fmt(focusDate,{weekday:'long',day:'numeric',month:'long'})}</h2><small>События, задачи и шаги к целям</small></div><div class="calendar-add"><button data-add-task="${selected}">＋ Задача</button><button class="primary" data-add-event="${selected}">＋ Событие</button></div></div><div class="event-list">${events.length?events.map(event=>`<div class="event-row"><time>${safe(event.time)}</time><span>${safe(event.name)}</span><button data-delete-event="${safe(event.id)}" aria-label="Удалить событие ${safe(event.name)}">×</button></div>`).join(''):'<p class="muted">Пока нет событий. Добавь важное на этот день.</p>'}</div>${goalRows}${state.tasks.filter(task=>task.date===selected).map(task=>`<label class="calendar-task"><input class="check" type="checkbox" data-task="${safe(task.id)}" ${task.done?'checked':''}>${safe(task.name)}</label>`).join('')}</section>`;
+  return `<div class="calendar">${cells.join('')}</div><section class="panel calendar-detail" id="calendar-detail" tabindex="-1"><div class="panel-head"><div><h2>${fmt(focusDate,{weekday:'long',day:'numeric',month:'long'})}</h2><small>События, задачи и шаги к целям</small></div><div class="calendar-add"><button data-add-task="${selected}">＋ Задача</button><button class="primary" data-add-event="${selected}">＋ Событие</button></div></div><div class="event-list">${events.length?events.map(event=>`<div class="event-row"><time>${safe(event.time)}</time><span>${safe(event.name)}</span><button data-delete-event="${safe(event.id)}" aria-label="Удалить событие ${safe(event.name)}">×</button></div>`).join(''):'<p class="muted">Пока нет событий. Добавь важное на этот день.</p>'}</div>${goalRows}${state.tasks.filter(task=>task.date===selected).map(task=>`<label class="calendar-task"><input class="check" type="checkbox" data-task="${safe(task.id)}" ${task.done?'checked':''}>${safe(task.name)}</label>`).join('')}</section>`;
 }
 function render() {
   const now = new Date();
@@ -128,7 +128,7 @@ function render() {
   document.body.classList.toggle('note-editing', screen==='notes' && !!activeNoteId);
   $('back').hidden=isHome;
   const current = route === 'sections' ? 'sections' : screen;
-  document.querySelectorAll('.site-links a').forEach(link => {
+  document.querySelectorAll('.site-links a, .mobile-nav a').forEach(link => {
     if (link.hash === '#' + current) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   });
@@ -276,7 +276,15 @@ $('view').onclick=e=>{
   if(button.dataset.addTask)openEditor('task',button.dataset.addTask);
   if(button.dataset.addEvent)openEditor('event',button.dataset.addEvent);
   if(button.dataset.deleteEvent){state.events=state.events.filter(event=>event.id!==button.dataset.deleteEvent);save();render();}
-  if(button.dataset.day){focusDate=new Date(button.dataset.day+'T12:00:00');render();}
+  if (button.dataset.day) {
+    focusDate = new Date(button.dataset.day + 'T12:00:00');
+    render();
+    const selected = $('view').querySelector('[data-day][aria-pressed="true"]');
+    selected?.focus({preventScroll:true});
+    if (matchMedia('(max-width: 700px)').matches && e.detail) {
+      $('calendar-detail').scrollIntoView({block:'nearest'});
+    }
+  }
 };
 $('view').addEventListener('input',e=>{
   if(e.target.id==='journal-sleep'){
@@ -323,7 +331,9 @@ $('view').onchange=e=>{
     state.tasks.find(t=>t.id===box.dataset.task).done=box.checked;
   }else return;
   const selector=box.dataset.habit?`[data-habit="${CSS.escape(box.dataset.habit)}"][data-date="${box.dataset.date}"]`:`[data-task="${CSS.escape(box.dataset.task)}"]`;
-  save();render();$('view').querySelector(selector)?.focus({preventScroll:true});
+  save();
+  render();
+  Array.from($('view').querySelectorAll(selector)).find(input => input.getClientRects().length)?.focus({preventScroll:true});
   lastHabitMark = null;
 };
 window.addEventListener('hashchange', () => {
