@@ -8,6 +8,7 @@ today.setHours(12, 0, 0, 0);
 let focusDate = new Date(today);
 let screen;
 let editorType;
+let editorOptions = {};
 let state = { habits: [], tasks: [], events: [], notes: [], journal: {}, maps: [], goals: [] };
 let activeNoteId = null;
 let noteQuery = '';
@@ -50,46 +51,21 @@ try {
   else { seed(); save(); }
 } catch { seed(); $('status').textContent='Открыт пример недели.'; }
 
-function habitTable(days) {
-  let scheduled=0, completed=0;
-  const rows=state.habits.map(h => {
-    let habitScheduled=0, habitDone=0;
-    const cells=days.map(day => {
-      if (!h.days.includes(weekday(day))) return '<td class="dash" aria-label="Свободный день">—</td>';
-      scheduled++;
-      habitScheduled++;
-      const date=key(day), checked=h.done.includes(date);
-      if (checked) completed++;
-      if (checked) habitDone++;
-      return `<td><input class="check" type="checkbox" data-habit="${safe(h.id)}" data-date="${date}" aria-label="${safe(h.name)}, ${short(day)}" ${checked?'checked':''}></td>`;
-    });
-    const percent=habitScheduled?Math.round(habitDone/habitScheduled*100):0;
-    const stars=Math.round(percent/20);
-    return `<tr><td>${safe(h.name)}</td>${cells.join('')}<td class="habit-progress"><span aria-label="${stars} из 5 звёзд" class="stars">${'★'.repeat(stars)}<i>${'☆'.repeat(5-stars)}</i></span><b>${percent}%</b></td></tr>`;
-  });
-  const headings=days.map(d => `<th class="${key(d)===key(today)?'is-today':''}">${weekdays[weekday(d)]}<time>${short(d)}</time></th>`);
-  return `<div class="panel tracker-panel"><div class="panel-head"><h2>Трекер привычек</h2><small>${state.habits.length} привычек</small></div>
-    <div class="scroll"><table aria-label="Привычки по дням недели"><thead><tr><th>Привычка</th>${headings.join('')}<th>Прогресс</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>
-    <form id="quick-habit" class="quick-habit"><input id="quick-name" name="habit" maxlength="90" required autocomplete="off" placeholder="Название новой привычки" aria-label="Название новой привычки"><button type="submit" class="primary">＋ Добавить привычку</button><button type="button" data-advanced-habit>Настроить дни</button></form>
-    <div class="summary"><span>Отмечено <b>${completed} из ${scheduled}</b></span><progress aria-label="Прогресс привычек" value="${completed}" max="${scheduled||1}"></progress></div></div>
-    ${victorySeries()}
-    ${lineChart(days)}
-    <section class="templates"><h2>Добавить одним нажатием</h2><div class="template-grid">${templates.map((name,i)=>`<button class="template" data-template="${i}">${name}<b aria-hidden="true">＋</b></button>`).join('')}</div></section>`;
-}
 function dailyProductivity(date) {
-  const plannedHabits=state.habits.filter(habit=>habit.days.includes(weekday(date)));
+  const plannedHabits=state.habits.filter(habit=>habitScheduled(habit, date));
   const done=plannedHabits.filter(habit=>habit.done.includes(key(date))).length;
   return {date,planned:plannedHabits.length,done,percent:plannedHabits.length?Math.round(done/plannedHabits.length*100):null};
 }
 function lineChart(days) {
   const values=days.map(date=>date<=today?dailyProductivity(date).percent:null);
-  const x=index=>55+index*100, y=value=>170-value*1.3;
+  const x=index=>55 + index * 600 / Math.max(days.length - 1, 1), y=value=>170-value*1.3;
+  const dense = days.length > 10;
   const grid=[100,75,50,25,0].map(value=>`<line x1="55" y1="${y(value)}" x2="655" y2="${y(value)}" class="line-grid"/><text x="43" y="${y(value)+4}" text-anchor="end" class="axis-label">${value}%</text>`).join('');
   let path='';
   values.forEach((value,index)=>{if(value!==null)path+=(path?' L ':'M ')+x(index)+' '+y(value);});
-  const dots=values.map((value,index)=>value===null?'':`<circle cx="${x(index)}" cy="${y(value)}" r="6" class="line-dot"><title>${short(days[index])}: ${value}%</title></circle><text x="${x(index)}" y="${y(value)-13}" text-anchor="middle" class="point-label">${value}%</text>`).join('');
-  const dates=days.map((date,index)=>`<text x="${x(index)}" y="203" text-anchor="middle" class="axis-label">${short(date)}</text>`).join('');
-  return `<section class="panel line-panel"><div class="panel-head"><div><h2>Продуктивность по дням</h2><small>Средний процент выполнения всех привычек, запланированных на день</small></div></div><div class="chart-scroll"><svg class="productivity-chart" viewBox="0 0 700 215" role="img" aria-label="График продуктивности по датам: ${values.map((value,index)=>value===null?'':short(days[index])+' — '+value+'%').filter(Boolean).join(', ')}">${grid}<path d="${path}" class="line-path"/>${dots}${dates}</svg></div></section>`;
+  const dots=values.map((value,index)=>value===null?'':`<circle cx="${x(index)}" cy="${y(value)}" r="6" class="line-dot"><title>${short(days[index])}: ${value}%</title></circle>${dense ? '' : `<text x="${x(index)}" y="${y(value)-13}" text-anchor="middle" class="point-label">${value}%</text>`}`).join('');
+  const dates=days.map((date,index)=>dense && index % 5 !== 0 && index !== days.length-1 ? '' : `<text x="${x(index)}" y="203" text-anchor="middle" class="axis-label">${short(date)}</text>`).join('');
+  return `<section class="panel line-panel"><div class="panel-head"><div><h2>Выполнение привычек по дням</h2><small>Средний процент выполнения всех привычек, запланированных на день</small></div></div><div class="chart-scroll"><svg class="productivity-chart" viewBox="0 0 700 215" role="img" aria-label="Выполнение привычек по датам: ${values.map((value,index)=>value===null?'':short(days[index])+' — '+value+'%').filter(Boolean).join(', ')}">${grid}<path d="${path}" class="line-path"/>${dots}${dates}</svg></div></section>`;
 }
 function victorySeries() {
   const won=date=>{const day=dailyProductivity(date);return day.planned>0&&day.percent>=70;};
@@ -115,17 +91,6 @@ function notesScreen() {
   const editor = current ? `<div class="note-actions"><button data-note-back>← К списку</button><span>Сохраняется автоматически</span><button data-pin-note="${safe(current.id)}" aria-label="${current.pinned?'Открепить':'Закрепить'} заметку">${current.pinned?'◆':'◇'}</button><button data-delete-note="${safe(current.id)}" aria-label="Удалить заметку">Удалить</button></div><input id="note-title" maxlength="120" placeholder="Название" aria-label="Название заметки" value="${safe(current.title)}"><textarea id="note-body" placeholder="Начни писать…" aria-label="Текст заметки">${safe(current.body)}</textarea><div class="note-updated">Изменено ${new Date(current.updated).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}</div>` : `<div class="note-placeholder"><span>✎</span><h2>Место для твоих мыслей</h2><p>Выбери заметку или создай новую.</p><button class="primary" data-new-note>＋ Новая заметка</button></div>`;
   return `<div class="notes-app ${current?'note-selected':''}">${list}<div class="note-editor">${editor}</div></div>`;
 }
-function dayCard(date, includeHabits=false) {
-  const day=key(date);
-  const tasks=state.tasks.filter(t=>t.date===day);
-  const tasksHtml=tasks.map(t=>`<label><input class="check" type="checkbox" data-task="${safe(t.id)}" ${t.done?'checked':''}>${safe(t.name)}</label>`).join('');
-  const habits=includeHabits?state.habits.filter(h=>h.days.includes(weekday(date))):[];
-  const habitsHtml=habits.map(h=>`<label><input class="check" type="checkbox" data-habit="${safe(h.id)}" data-date="${day}" ${h.done.includes(day)?'checked':''}>${safe(h.name)}</label>`).join('');
-  return `<article class="day"><h3>${fmt(date,{weekday:'long',day:'numeric',month:'long'})}</h3>
-    ${habitsHtml?'<small>Привычки</small>'+habitsHtml:''}<small>Задачи</small>${tasksHtml||'<span class="muted">Свободный день</span>'}
-    <button class="plain" data-add-task="${day}">＋ Добавить задачу</button>
-    <small>Выполнено ${tasks.filter(t=>t.done).length} · Осталось ${tasks.filter(t=>!t.done).length}</small></article>`;
-}
 function calendar() {
   const first=new Date(focusDate.getFullYear(),focusDate.getMonth(),1,12);
   const last=new Date(first.getFullYear(),first.getMonth()+1,0,12);
@@ -145,7 +110,7 @@ function calendar() {
     ${goalStepCheckbox(goal, step)}<span>${safe(step.text)}<small>${safe(goal.title)}</small></span>
   </label>`).join('');
   const events=state.events.filter(event=>event.date===selected).sort((a,b)=>a.time.localeCompare(b.time));
-  return `<div class="calendar">${cells.join('')}</div><section class="panel calendar-detail"><div class="panel-head"><div><h2>${fmt(focusDate,{weekday:'long',day:'numeric',month:'long'})}</h2><small>События, задачи и шаги к целям</small></div><button class="primary" data-add-event="${selected}">＋ Событие</button></div><div class="event-list">${events.length?events.map(event=>`<div class="event-row"><time>${safe(event.time)}</time><span>${safe(event.name)}</span><button data-delete-event="${safe(event.id)}" aria-label="Удалить событие ${safe(event.name)}">×</button></div>`).join(''):'<p class="muted">Пока нет событий. Добавь важное на этот день.</p>'}</div>${goalRows}${state.tasks.filter(task=>task.date===selected).map(task=>`<label class="calendar-task"><input class="check" type="checkbox" data-task="${safe(task.id)}" ${task.done?'checked':''}>${safe(task.name)}</label>`).join('')}</section>`;
+  return `<div class="calendar">${cells.join('')}</div><section class="panel calendar-detail"><div class="panel-head"><div><h2>${fmt(focusDate,{weekday:'long',day:'numeric',month:'long'})}</h2><small>События, задачи и шаги к целям</small></div><div class="calendar-add"><button data-add-task="${selected}">＋ Задача</button><button class="primary" data-add-event="${selected}">＋ Событие</button></div></div><div class="event-list">${events.length?events.map(event=>`<div class="event-row"><time>${safe(event.time)}</time><span>${safe(event.name)}</span><button data-delete-event="${safe(event.id)}" aria-label="Удалить событие ${safe(event.name)}">×</button></div>`).join(''):'<p class="muted">Пока нет событий. Добавь важное на этот день.</p>'}</div>${goalRows}${state.tasks.filter(task=>task.date===selected).map(task=>`<label class="calendar-task"><input class="check" type="checkbox" data-task="${safe(task.id)}" ${task.done?'checked':''}>${safe(task.name)}</label>`).join('')}</section>`;
 }
 function render() {
   const route = location.hash.slice(1);
@@ -167,10 +132,10 @@ function render() {
   $('title').closest('header').hidden = isHome;
   $('today').hidden=isHome;
   $('title').textContent = isHome ? 'Сегодня' : screens[screen] || module.title;
-  $('primary').hidden = !isCore && screen!=='notes';
+  $('primary').hidden = !isCore && screen!=='notes' && screen!=='tasks';
   document.querySelector('.tabs').hidden = !isCore;
   document.querySelector('.toolbar').hidden = !isCore && screen !== 'analytics';
-  $('primary').textContent = screen === 'habits' ? '＋ Привычка' : screen==='notes'?'＋ Новая заметка':'＋ Событие';
+  $('primary').textContent = screen === 'habits' ? '＋ Привычка' : screen==='notes'?'＋ Новая заметка':screen==='tasks'?'＋ Задача':'＋ Событие';
   $('today').textContent = fmt(today, { weekday: 'long', day: 'numeric', month: 'long' });
   document.querySelectorAll('.tabs a').forEach(link => {
     const active = link.hash === '#' + screen;
@@ -179,12 +144,13 @@ function render() {
     else link.removeAttribute('aria-current');
   });
   const days = week(focusDate);
-  $('period').textContent = screen === 'calendar'
+  $('period').textContent = screen === 'calendar' || (screen === 'habits' && habitRange === 'month')
     ? fmt(focusDate, { month: 'long', year: 'numeric' })
     : short(days[0]) + ' — ' + short(days[6]) + ' ' + days[6].getFullYear();
   const views = {
     home: homeScreen,
-    habits: () => habitTable(days),
+    habits: habitsScreen,
+    tasks: plannerScreen,
     calendar,
     analytics: () => analyticsScreen(days),
     notes: notesScreen,
@@ -192,11 +158,13 @@ function render() {
     mind: mindScreen,
     goals: goalsScreen
   };
+  const horizontal = $('orbit-scroll')?.scrollLeft;
   $('view').innerHTML = views[screen]();
+  if (horizontal !== undefined && $('orbit-scroll')) $('orbit-scroll').scrollLeft = horizontal;
   document.title = $('title').textContent + ' · JOSPAT';
 }
 function move(direction) {
-  if(screen==='calendar') focusDate=new Date(focusDate.getFullYear(),focusDate.getMonth()+direction,1,12);
+  if(screen==='calendar' || (screen==='habits' && habitRange==='month')) focusDate=new Date(focusDate.getFullYear(),focusDate.getMonth()+direction,1,12);
   else focusDate=shift(focusDate,7*direction);
   render();
 }
@@ -205,25 +173,61 @@ $('next').onclick=()=>move(1);
 $('current').onclick=()=>{focusDate=new Date(today);render();};
 $('template').innerHTML='<option value="">Своя привычка</option>'+templates.map((name,i)=>`<option value="${i}">${name}</option>`).join('');
 $('schedule').innerHTML=weekdays.map((day,i)=>`<label><input type="checkbox" value="${i}" checked>${day}</label>`).join('');
-function openEditor(type, date=key(focusDate), template='') {
-  editorType=type;
+function openEditor(type, date=key(focusDate), options={}) {
+  editorType = type;
+  editorOptions = options;
+  const {habit, task, parentId} = options;
+  const isHabit = type === 'habit';
+  const isTask = type === 'task';
+  const parent = state.tasks.find(item => item.id === parentId);
   $('entry').reset();
-  $('schedule').querySelector('input').setCustomValidity('');
+  const weekdaysInputs = Array.from($('schedule').querySelectorAll('input'));
+  weekdaysInputs[0].setCustomValidity('');
+  weekdaysInputs.forEach(input => { input.checked = !habit || habit.days.includes(Number(input.value)); });
   $('name').setCustomValidity('');
-  const habit=type==='habit';
-  $('dialog-title').textContent=habit?'Новая привычка':type==='event'?'Новое событие':'Новая задача';
-  $('template-fields').hidden=!habit;
-  $('schedule-fields').hidden=!habit;
-  $('task-fields').hidden=habit;
-  $('date').required=!habit;
-  $('date').value=date;
-  $('event-time-fields').hidden=type!=='event';
-  $('event-time').required=type==='event';
-  $('template').value=template;
-  $('name').value=template===''?'':templates[Number(template)];
+  $('dialog-title').textContent = isHabit ? (habit ? 'Изменить привычку' : 'Добавить привычку') : isTask ? (task ? 'Изменить задачу' : parent ? 'Новая подзадача' : 'Новая задача') : 'Новое событие';
+  $('editor').classList.toggle('habit-drawer', isHabit);
+  $('template-fields').hidden = !isHabit || Boolean(habit);
+  $('habit-fields').hidden = !isHabit;
+  $('habit-delete').hidden = !habit;
+  $('schedule-fields').hidden = !isHabit;
+  $('task-fields').hidden = isHabit;
+  $('planner-fields').hidden = !isTask;
+  $('date').required = !isHabit;
+  $('date').readOnly = Boolean(parent);
+  $('date').value = date;
+  $('event-time-fields').hidden = type !== 'event';
+  $('event-time').required = type === 'event';
+  $('name').value = habit?.name || task?.name || '';
+  $('habit-description').value = habit?.description || '';
+  $('habit-color').value = habit ? habitColor(habit, state.habits.indexOf(habit)) : habitColors[state.habits.length % habitColors.length];
+  $('task-project').value = task?.project || parent?.project || '';
+  $('task-time').value = task?.time || '';
+  $('task-priority').value = task?.priority || 0;
+  updateHabitPalette();
   $('editor').showModal();
   $('name').focus();
 }
+function updateHabitPalette() {
+  $('habit-palette').innerHTML = habitColors.map((color,index) => `<button type="button" style="--swatch:${color}" data-color="${color}" aria-pressed="${$('habit-color').value === color}" aria-label="Цвет ${index+1}"></button>`).join('');
+}
+$('habit-palette').onclick = event => {
+  const color = event.target.dataset.color;
+  if (!color) return;
+  $('habit-color').value = color;
+  updateHabitPalette();
+  $('habit-palette').querySelector(`[data-color="${color}"]`)?.focus();
+};
+$('habit-color').oninput = updateHabitPalette;
+$('habit-delete').onclick = () => {
+  const habit = editorOptions.habit;
+  if (!habit || !confirm(`Удалить привычку «${habit.name}» и её отметки?`)) return;
+  state.habits = state.habits.filter(item => item.id !== habit.id);
+  save();
+  $('editor').close();
+  render();
+  $('primary').focus();
+};
 $('template').onchange=()=>{$('name').value=templates[$('template').value]||'';};
 $('name').oninput=()=>$('name').setCustomValidity('');
 $('schedule').onchange=()=>$('schedule').querySelector('input').setCustomValidity('');
@@ -231,23 +235,22 @@ function newNote() {
   const note={id:crypto.randomUUID(),title:'',body:'',pinned:false,updated:new Date().toISOString()};
   state.notes.unshift(note);activeNoteId=note.id;save();render();$('note-title')?.focus();
 }
-$('primary').onclick=()=>{if(screen==='habits')$('quick-name')?.focus();else if(screen==='notes')newNote();else openEditor('event');};
+$('primary').onclick=()=>{if(screen==='habits')openEditor('habit');else if(screen==='notes')newNote();else if(screen==='tasks')openEditor('task',key(plannerDate));else openEditor('event');};
 $('close').onclick=()=>$('editor').close();
 $('entry').onsubmit=e=>{
   e.preventDefault();
   const name=$('name').value.trim();
   if(!name){$('name').setCustomValidity('Введите название');$('name').reportValidity();return;}
-  const id=crypto.randomUUID();
-  if(editorType==='habit'){
-    const days=Array.from($('schedule').querySelectorAll(':checked'),box=>Number(box.value));
-    if(!days.length){const first=$('schedule').querySelector('input');first.setCustomValidity('Выберите день');first.reportValidity();return;}
-    state.habits.push({id,name,days,done:[]});
-  }else if(editorType==='event'){
-    state.events.push({id,name,date:$('date').value,time:$('event-time').value});
-    focusDate=new Date($('date').value+'T12:00:00');
-  }else{
-    state.tasks.push({id,name,date:$('date').value,done:false});
-    focusDate=new Date($('date').value+'T12:00:00');
+  if (editorType === 'habit') {
+    if (!saveHabit(name, editorOptions.habit)) return;
+  } else if (editorType === 'event') {
+    state.events.push({id:crypto.randomUUID(),name,date:$('date').value,time:$('event-time').value});
+    focusDate = new Date(`${$('date').value}T12:00:00`);
+  } else {
+    savePlannerTask(name, editorOptions);
+    const selected = new Date(`${$('date').value}T12:00:00`);
+    if (screen === 'calendar') focusDate = selected;
+    else if (!editorOptions.task) plannerDate = selected;
   }
   save();$('editor').close();render();
 };
@@ -255,6 +258,7 @@ $('view').onclick=e=>{
   const button=e.target.closest('button');
   if(!button)return;
   if(button.hasAttribute('data-today-start')) { focusTodayHabits(); return; }
+  if(habitsClick(button) || plannerClick(button)) return;
   if(journalClick(button))return;
   if(mindClick(button))return;
   if(goalsClick(button))return;
@@ -263,11 +267,6 @@ $('view').onclick=e=>{
   if(button.hasAttribute('data-note-back')){activeNoteId=null;render();}
   if(button.hasAttribute('data-pin-note')){const note=state.notes.find(item=>item.id===button.dataset.pinNote);if(note){note.pinned=!note.pinned;save();render();}}
   if(button.hasAttribute('data-delete-note')){state.notes=state.notes.filter(item=>item.id!==button.dataset.deleteNote);activeNoteId=null;save();render();}
-  if(button.hasAttribute('data-template')){
-    const name=templates[Number(button.dataset.template)];
-    state.habits.push({id:crypto.randomUUID(),name,days:[0,1,2,3,4,5,6],done:[]});
-    save();render();
-  }
   if(button.hasAttribute('data-advanced-habit'))openEditor('habit');
   if(button.dataset.addTask)openEditor('task',button.dataset.addTask);
   if(button.dataset.addEvent)openEditor('event',button.dataset.addEvent);
@@ -299,28 +298,28 @@ $('view').addEventListener('change',e=>{
 });
 $('view').addEventListener('keydown',e=>mindKeydown(e));
 $('view').addEventListener('dblclick',e=>{if(e.target.closest('[data-mind-node]'))mindEdit();});
-$('view').addEventListener('submit',e=>{
-  if(goalsSubmit(e))return;
-  if(e.target.id!=='quick-habit')return;
-  e.preventDefault();
-  const name=$('quick-name').value.trim();
-  if(!name)return;
-  state.habits.push({id:crypto.randomUUID(),name,days:[0,1,2,3,4,5,6],done:[]});
-  save();render();$('quick-name')?.focus();
-});
+$('view').addEventListener('submit', goalsSubmit);
 $('view').onchange=e=>{
   const box=e.target;
-  if(goalsChange(box))return;
+  if (goalsChange(box) || plannerChange(box)) return;
+  if (box.id === 'habit-order') {
+    habitOrder = box.value;
+    render();
+    $('habit-order').focus({preventScroll:true});
+    return;
+  }
   if(box.dataset.habit){
     const habit=state.habits.find(h=>h.id===box.dataset.habit);
     const date=box.dataset.date;
     habit.done=habit.done.filter(d=>d!==date);
     if(box.checked)habit.done.push(date);
+    lastHabitMark = box.checked ? {id:habit.id,date} : null;
   }else if(box.dataset.task){
     state.tasks.find(t=>t.id===box.dataset.task).done=box.checked;
   }else return;
   const selector=box.dataset.habit?`[data-habit="${CSS.escape(box.dataset.habit)}"][data-date="${box.dataset.date}"]`:`[data-task="${CSS.escape(box.dataset.task)}"]`;
   save();render();$('view').querySelector(selector)?.focus({preventScroll:true});
+  lastHabitMark = null;
 };
 window.addEventListener('hashchange', () => {
   render();
@@ -332,4 +331,5 @@ function focusSections() {
   $('sections')?.scrollIntoView();
 }
 render();
+startStarfield();
 if (location.hash === '#sections') requestAnimationFrame(focusSections);

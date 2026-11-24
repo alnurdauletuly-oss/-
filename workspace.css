@@ -1,0 +1,105 @@
+#starfield { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.site-nav, main { position: relative; z-index: 1; }
+.today-stage { margin-bottom: 24px; }
+.calendar-add { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.orbit-panel { overflow: hidden; }
+.orbit-tools, .plan-top, .plan-list-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.orbit-tools { padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.orbit-range, .plan-tabs, .plan-days { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.orbit-tools label, .plan-list-head label { color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.orbit-tools select, .plan-list-head select { width: auto; padding: 7px 10px; }
+.orbit-range button[aria-pressed=true], .plan-tabs button[aria-pressed=true] { color: var(--lime); border-color: #627d2b; background: var(--accent-wash); }
+.orbit-scroll { overflow-x: auto; scrollbar-color: #50613e var(--field); }
+.orbit-table { width: 100%; border: 0; border-collapse: separate; border-spacing: 0; }
+.orbit-table :is(th, td) { padding: 0; text-align: center; border-bottom: 1px solid var(--line); }
+.orbit-table .habit-name { position: sticky; left: 0; z-index: 2; width: 12rem; min-width: 12rem; background: var(--panel); text-align: left; padding-inline: 14px; border-right: 1px solid var(--line); }
+.orbit-table thead th { height: 52px; font-size: .875rem; }
+.orbit-table thead small { display: block; color: var(--muted); }
+.orbit-table thead .is-today { background: var(--accent-wash); }
+.habit-name button { display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px 0; border: 0; min-height: 48px; background: transparent; text-align: left; }
+.habit-name button i { flex: 0 0 9px; height: 9px; border-radius: 50%; background: var(--habit-color); }
+.habit-name button span, .habit-name button small { min-width: 0; overflow-wrap: anywhere; }
+.habit-name button small { color: var(--muted); display: block; font-size: .75rem; }
+.orbit-table .habit-day { min-width: 40px; }
+.habit-rest { color: var(--muted); opacity: .64; }
+.habit-orbit { position: relative; display: grid; place-items: center; min-height: 46px; cursor: pointer; }
+.habit-orbit input { position: absolute; inset: 0; opacity: 0; margin: 0; width: 100%; height: 100%; z-index: 1; cursor: pointer; }
+.habit-orbit span { position: relative; display: block; width: 21px; height: 21px; background: var(--field); border: 1px solid #596562; border-radius: 50%; }
+.habit-orbit input:checked + span { background: var(--habit-color); border-color: var(--habit-color); }
+.habit-orbit:is(:hover, :focus-within) span { outline: 2px solid var(--habit-color); outline-offset: 3px; }
+.join-left .habit-orbit::before, .join-right .habit-orbit::after { content: ''; position: absolute; top: calc(50% - 5px); height: 10px; width: calc(50% + 2px); background: var(--habit-color); }
+.join-left .habit-orbit::before { left: -1px; }
+.join-right .habit-orbit::after { right: -1px; }
+.just-marked .habit-orbit span { animation: orbit-pop .32s ease-out; }
+.just-marked .habit-orbit::before, .just-marked .habit-orbit::after { animation: orbit-join .3s ease-out; }
+@keyframes orbit-pop { from { transform: scale(.65); } 60% { transform: scale(1.27); } to { transform: scale(1); } }
+@keyframes orbit-join { from { opacity: .12; transform: scaleX(.1); } to { opacity: 1; transform: scaleX(1); } }
+.orbit-table .habit-score { min-width: 106px; white-space: nowrap; padding-inline: 8px; font-size: .875rem; }
+.habit-score strong { margin-left: 8px; }
+.habit-streak { color: var(--muted); }
+.habit-streak span { display: inline-block; opacity: .35; }
+.habit-streak.is-lit span { opacity: 1; animation: orbit-flame 1.75s ease-in-out infinite alternate; }
+@keyframes orbit-flame { to { transform: translateY(-1px) scale(1.15); filter: drop-shadow(0 0 5px #ff8d42a6); } }
+.orbit-table tfoot :is(th,td) { height: 37px; color: var(--muted); font-size: .8rem; }
+.orbit-add { margin: 12px 20px; color: var(--lime); }
+.orbit-empty { padding: 24px 20px 0; color: var(--muted); }
+.orbit-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-top: 14px; }
+.orbit-stat { display: grid; align-content: start; gap: 6px; padding: 17px; }
+.orbit-stat > span, .orbit-stat p { color: var(--muted); overflow-wrap: anywhere; }
+.orbit-stat p { font-size: .875rem; }
+.orbit-stat strong { font: 2.45rem/1.1 var(--display-font); color: var(--habit-color,var(--lime)); }
+.orbit-stat progress { width: 100%; height: 5px; }
+#editor.habit-drawer { position: fixed; inset: 0 0 0 auto; width: min(100%,410px); max-width: 100%; height: 100%; max-height: 100%; margin: 0; border-radius: 18px 0 0 18px; animation: drawer-in .23s ease-out; }
+@keyframes drawer-in { from { translate: 32px 0; opacity: .55; } }
+#habit-description { width: 100%; border: 1px solid var(--line); padding: 10px 12px; border-radius: 9px; background: var(--field); color: var(--text); font: inherit; resize: vertical; }
+.habit-palette { display: flex; flex-wrap: wrap; gap: 8px; }
+.habit-palette button { background: var(--swatch); width: 33px; height: 33px; padding: 0; border: 0; border-radius: 50%; }
+.habit-palette button[aria-pressed=true] { outline: 2px solid var(--swatch); outline-offset: 3px; }
+#editor .habit-custom-color { display: flex; align-items: center; justify-content: space-between; }
+#editor #habit-color { width: 42px; height: 32px; padding: 3px; }
+#editor .danger-action { margin-top: 12px; color: #ffada6; }
+
+.daily-plan { padding: clamp(16px, 3vw, 25px); }
+.daily-plan + .daily-plan { margin-top: 15px; }
+.plan-top h2 { font: 2.05rem/1.15 var(--display-font); }
+.plan-top p, .plan-list-head, .plan-empty { color: var(--muted); font-size: .875rem; }
+.plan-days input { color: var(--text); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.plan-tabs { margin-top: 16px; }
+.plan-list-head { margin-top: 18px; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
+.plan-list, .plan-subtasks { list-style: none; margin: 0; padding: 0; }
+.plan-list { margin-bottom: 14px; }
+.plan-subtasks { padding-left: clamp(12px, 3vw, 28px); border-left: 1px solid #526349; margin-left: 12px; }
+.plan-task { min-width: 0; }
+.plan-task-row { min-height: 48px; padding: 5px 7px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; border-bottom: 1px solid var(--line); }
+.plan-task-row label { display: flex; align-items: center; flex: 1 1 8rem; gap: 9px; min-height: 35px; min-width: 0; overflow-wrap: anywhere; }
+.plan-task-row label input { flex: none; }
+.plan-task-row label:has(input:checked) .task-name { text-decoration: line-through; color: var(--muted); }
+.plan-task-row label small { display: block; color: var(--muted); }
+.plan-task-row button { border: 0; background: transparent; min-width: 38px; min-height: 40px; padding: 3px; }
+.plan-task-row button:hover { background: var(--accent-wash); }
+.task-star[aria-pressed=true] { color: var(--lime); }
+.task-time, .task-priority, .late-label { padding: 2px 6px; border-radius: 5px; font-size: .75rem; }
+.task-time { color: #c4e4ff; background: #172936; margin-right: 6px; }
+.priority-1 { color: #ffdd9a; background: #382c18; }
+.priority-2 { color: #ffb5ac; background: #3d2320; }
+.overdue-panel .plan-list { margin: 9px 0 0; }
+.is-late .plan-task-row { border-left: 3px solid var(--late); margin-top: 5px; }
+.late-green { --late:#a9d89c; }
+.late-yellow { --late:#f6d16e; }
+.late-red { --late:#ff9c98; }
+.late-label { color: var(--late); background: color-mix(in srgb, var(--late) 12%, transparent); }
+.plan-empty { padding: 18px 0; }
+
+@media (max-width: 680px) {
+  .today-hero h1 { font-size: clamp(42px, 12vw, 76px); }
+  .orbit-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .orbit-table .habit-name { width: 8rem; min-width: 8rem; padding-inline: 8px; }
+  .orbit-table .habit-day { min-width: 44px; }
+  .habit-orbit { min-height: 55px; }
+  .orbit-tools { padding-inline: 12px; }
+  .plan-task-row button { min-width: 44px; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .just-marked .habit-orbit span, .just-marked .habit-orbit::before, .just-marked .habit-orbit::after, .habit-streak.is-lit span, #editor.habit-drawer { animation: none; }
+}

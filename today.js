@@ -1,7 +1,7 @@
 function todayScreen() {
   const now = new Date();
   const date = key(now);
-  const habits = state.habits.filter(habit => habit.days.includes(weekday(now)));
+  const habits = state.habits.filter(habit => habitScheduled(habit, now));
   const done = habits.filter(habit => habit.done.includes(date)).length;
   const percent = habits.length ? Math.round(done / habits.length * 100) : 0;
   const events = state.events.filter(event => new Date(`${event.date}T${event.time}`) >= now);

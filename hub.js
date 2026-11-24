@@ -1,5 +1,6 @@
 const modules = [
   { id: 'habits', title: 'Привычки', subtitle: 'Ритм твоего дня', description: 'Отметки и прогресс за неделю.', color: 'mint', art: 'checks', features: ['Привычки', 'Календарь'] },
+  { id: 'tasks', title: 'Задачи', description: 'План на день и подзадачи.', color: 'blue', art: 'tasks' },
   { id: 'analytics', title: 'Аналитика', subtitle: 'Замечай закономерности', description: 'Динамика по дням и привычки, которые идут легче.', color: 'blue', art: 'bars', features: ['Обзор недели', 'По привычкам'] },
   { id: 'notes', title: 'Заметки', subtitle: 'Сохрани свои мысли', description: 'Запиши идею, план или маленькую победу.', color: 'sand', art: 'note' },
   { id: 'goals', title: 'Цели', subtitle: 'Держи важное в фокусе', description: 'Соедини большую цель с конкретными шагами.', color: 'rose', art: 'goal' },
@@ -12,6 +13,7 @@ function illustration(type) {
     checks: '<div class="mini-tracker"><div class="mini-title">Мои привычки <span>ПН · ВС</span></div>' +
       ['Чтение', 'Движение', 'Новые знания'].map((name,row) =>
         '<div class="mini-row"><span>'+name+'</span>'+Array.from({length:5},(_,i)=>'<i class="'+(i<4-row?'filled':'')+'">'+(i<4-row?'✓':'')+'</i>').join('')+'</div>').join('')+'</div>',
+    tasks: '<div class="mini-tracker"><div class="mini-title">План дня</div><div class="mini-row"><span>Главная задача</span><i class="filled">★</i></div><div class="mini-row"><span>Подзадача</span><i></i></div></div>',
     bars: '<div class="mini-chart"><div class="mini-title">Твой ритм</div><div class="bars">'+[42,70,52,86,65,100,78].map((n,i)=>'<div><i style="--height:'+n+'%"></i><span>'+weekdays[i]+'</span></div>').join('')+'</div></div>',
     goal: '<div class="goal-art"><div class="target"><div><div></div></div></div><span>Моя цель</span></div>',
     note: '<div class="paper"><span>Сегодня получилось…</span><i></i><i></i><i></i><b>✧</b></div>',
@@ -22,7 +24,7 @@ function illustration(type) {
 }
 
 function homeScreen() {
-  return todayScreen() + `<section class="today-library" id="sections" tabindex="-1" aria-labelledby="sections-title"><h2 id="sections-title">Все разделы</h2><div class="module-grid">${modules.map(module => `
+  return todayScreen() + plannerScreen() + `<section class="today-library" id="sections" tabindex="-1" aria-labelledby="sections-title"><h2 id="sections-title">Все разделы</h2><div class="module-grid">${modules.map(module => `
     <a class="module-card ${module.color}" href="#${module.id}">
       <div class="card-art" aria-hidden="true">${illustration(module.art)}</div>
       <div class="card-copy"><h3>${module.title}</h3><p>${module.description}</p></div>
@@ -38,7 +40,7 @@ function analyticsScreen(days) {
   const active=daily.filter(day=>day.planned);
   const best=active.length?active.reduce((best,day)=>day.percent>best.percent?day:best):null;
   return `<div class="insight-grid"><article class="insight-card"><span>Выполнено</span><strong>${done}<small> / ${planned}</small></strong><p>Отметок за выбранную неделю</p></article><article class="insight-card"><span>Общий результат</span><strong>${percent}%</strong><p>Выполнено из запланированного</p></article><article class="insight-card"><span>Лучший день</span><strong>${best?best.percent+'%':'—'}</strong><p>${best?fmt(best.date,{weekday:'long',day:'numeric',month:'long'}):'Появится после первой отметки'}</p></article></div>${lineChart(days)}<section class="panel breakdown"><h2>Привычки по отдельности</h2><p class="muted">Считаются только дни, которые уже наступили.</p>${state.habits.length?state.habits.map(habit=>{
-    const target=elapsed.filter(date=>habit.days.includes(weekday(date)));
+    const target=elapsed.filter(date=>habitScheduled(habit,date));
     const count=target.filter(date=>habit.done.includes(key(date))).length;
     const share=target.length?Math.round(count/target.length*100):0;
     return `<div class="breakdown-row"><span>${safe(habit.name)}</span><progress max="100" value="${share}"></progress><b>${share}%</b></div>`;
