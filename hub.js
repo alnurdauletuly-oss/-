@@ -1,11 +1,12 @@
 const modules = [
-  { id: 'habits', title: 'Привычки', subtitle: 'Ритм твоего дня', description: 'Отметки и прогресс за неделю.', color: 'mint', art: 'checks', features: ['Привычки', 'Календарь'] },
+  { id: 'habits', title: 'Привычки', subtitle: 'Ритм твоего дня', description: 'Отметки и прогресс за неделю или месяц.', color: 'mint', art: 'checks' },
   { id: 'tasks', title: 'Задачи', description: 'План на день и подзадачи.', color: 'blue', art: 'tasks' },
   { id: 'analytics', title: 'Аналитика', subtitle: 'Замечай закономерности', description: 'Динамика по дням и привычки, которые идут легче.', color: 'blue', art: 'bars', features: ['Обзор недели', 'По привычкам'] },
   { id: 'notes', title: 'Заметки', subtitle: 'Сохрани свои мысли', description: 'Запиши идею, план или маленькую победу.', color: 'sand', art: 'note' },
   { id: 'goals', title: 'Цели', subtitle: 'Держи важное в фокусе', description: 'Соедини большую цель с конкретными шагами.', color: 'rose', art: 'goal' },
   { id: 'journal', title: 'Дневник', subtitle: 'Пойми свой день', description: 'Сон, настроение, энергия и мысли — в одной записи.', color: 'peach', art: 'journal' },
-  { id: 'mind', title: 'Карта мыслей', subtitle: 'Идеи по веткам', description: 'Преврати идею в понятные ветки и следующие шаги.', color: 'lavender', art: 'mind' }
+  { id: 'mind', title: 'Карта мыслей', subtitle: 'Идеи по веткам', description: 'Преврати идею в понятные ветки и следующие шаги.', color: 'lavender', art: 'mind' },
+  { id: 'calendar', title: 'Календарь', description: 'Важные события, задачи и шаги к целям по датам.', color: 'mint', art: 'calendar' }
 ];
 
 function illustration(type) {
@@ -13,6 +14,9 @@ function illustration(type) {
     checks: '<div class="mini-tracker"><div class="mini-title">Мои привычки <span>ПН · ВС</span></div>' +
       ['Чтение', 'Движение', 'Новые знания'].map((name,row) =>
         '<div class="mini-row"><span>'+name+'</span>'+Array.from({length:5},(_,i)=>'<i class="'+(i<4-row?'filled':'')+'">'+(i<4-row?'✓':'')+'</i>').join('')+'</div>').join('')+'</div>',
+    calendar: '<div class="mini-tracker"><div class="mini-title">Календарь</div><div class="mini-row">' +
+      Array.from({length:7}, (_, i) => '<i class="' + (i === 2 ? 'filled' : '') + '">' + (i + 12) + '</i>').join('') +
+      '</div><div class="mini-row"><span>18:30 · Встреча</span></div></div>',
     tasks: '<div class="mini-tracker"><div class="mini-title">План дня</div><div class="mini-row"><span>Главная задача</span><i class="filled">★</i></div><div class="mini-row"><span>Подзадача</span><i></i></div></div>',
     bars: '<div class="mini-chart"><div class="mini-title">Твой ритм</div><div class="bars">'+[42,70,52,86,65,100,78].map((n,i)=>'<div><i style="--height:'+n+'%"></i><span>'+weekdays[i]+'</span></div>').join('')+'</div></div>',
     goal: '<div class="goal-art"><div class="target"><div><div></div></div></div><span>Моя цель</span></div>',

@@ -1,6 +1,11 @@
 let activeMapId = null;
 let selectedMindNodeId = null;
-const mindColors = ['#ed4fb0','#18b6ed','#00d5b5','#9661ed','#ffd93d','#ed814f'];
+const mindColors = ['#bbf029', '#63d9ca', '#a296ff', '#ffac7c', '#ef91bb', '#80baff'];
+let mindMode = 'map';
+let mindZoom = 1;
+let mindEntrance = true;
+const mindCollapsed = new Set();
+const mindHistory = new Map();
 
 function mindActiveMap() {
   if (!state.maps.length) {
@@ -25,100 +30,361 @@ function mindFind(root,id,parent=null,siblings=null,index=0) {
   return null;
 }
 function mindLayout(root) {
-  const nodes=[], edges=[];
-  let leaf=0,maxDepth=0;
-  function walk(node,depth=0,parent=null,color=null) {
-    maxDepth=Math.max(maxDepth,depth);
-    const item={node,depth,x:42+depth*256,y:0,color:color||'#7555a5',parent};
+  const nodes = [], edges = [];
+  let nextY = 38, right = 0;
+  function walk(node, depth = 0, parent = null, color = mindColors[0]) {
+    const length = [...(node.text.trim() || 'Новая ветка')].length;
+    const width = Math.max(104, Math.min(235, length * 8 + 46));
+    const item = {node, parent, color, width, x: parent ? parent.x + parent.width + 72 : 34, y: 0};
     nodes.push(item);
-    const children=node.children||[];
-    if (!children.length) item.y=48+leaf++*92;
-    else {
-      children.forEach((child,i)=>walk(child,depth+1,item,depth===0?mindColors[i%mindColors.length]:item.color));
-      const own=nodes.filter(n=>n.parent===item);
-      item.y=(own[0].y+own[own.length-1].y)/2;
+    right = Math.max(right, item.x + width);
+    const children = mindCollapsed.has(node.id) ? [] : node.children;
+    if (children.length) {
+      const branches = children.map((child, i) => walk(child, depth + 1, item, depth ? color : mindColors[i % mindColors.length]));
+      item.y = (branches[0].y + branches.at(-1).y) / 2;
+    } else {
+      item.y = nextY;
+      nextY += 78;
     }
-    if (parent) edges.push({from:parent,to:item});
+    if (parent) edges.push({from:parent, to:item});
+    return item;
   }
   walk(root);
-  return {nodes,edges,width:Math.max(800,(maxDepth+1)*256+130),height:Math.max(490,leaf*92+92)};
+  return {nodes, edges, width: right + 104, height: Math.max(220, nextY + 26)};
 }
+
+function mindNodeControl(node) {
+  const selected = node.id === selectedMindNodeId;
+  return `<button class="mind-node-label" type="button" data-mind-node="${safe(node.id)}" aria-pressed="${selected}" title="${safe(node.text || 'Новая ветка')}">${safe(node.text.trim() || 'Новая ветка')}</button>`;
+}
+
+function mindNodeMarkup(node, root, style = '') {
+  const selected = node.id === selectedMindNodeId;
+  const collapsed = mindCollapsed.has(node.id);
+  return `<div class="mind-item ${root ? 'mind-item-root' : ''} ${selected ? 'selected' : ''}" ${style}>
+    ${mindNodeControl(node)}
+    <button type="button" class="mind-node-add" data-mind-action="child" aria-label="Добавить подветку">＋</button>
+    ${collapsed ? `<button type="button" class="mind-node-fold" data-mind-unfold="${safe(node.id)}" aria-label="Развернуть ветку" title="Развернуть ветку">+${node.children.length}</button>` : ''}
+  </div>`;
+}
+
 function mindScreen() {
-  const map=mindActiveMap(), selected=mindFind(map.root,selectedMindNodeId).node;
-  const layout=mindLayout(map.root);
-  const lines=layout.edges.map(({from,to})=>{
-    const x1=from.x+206,x2=to.x,y1=from.y+22,y2=to.y+22,m=(x1+x2)/2;
+  const map = mindActiveMap(), current = mindFind(map.root, selectedMindNodeId);
+  const layout = mindLayout(map.root);
+  const lines = layout.edges.map(({from,to}) => {
+    const x1 = from.x + from.width, x2 = to.x, y1 = from.y + 26, y2 = to.y + 26, m = (x1 + x2) / 2;
     return `<path d="M ${x1} ${y1} C ${m} ${y1}, ${m} ${y2}, ${x2} ${y2}" stroke="${to.color}"/>`;
   }).join('');
-  const nodes=layout.nodes.map(({node,depth,x,y,color})=>`<button class="mind-branch ${depth===0?'mind-root':''} ${node.id===selectedMindNodeId?'selected':''}" style="left:${x}px;top:${y}px;--branch:${color}" data-mind-node="${safe(node.id)}" aria-pressed="${node.id===selectedMindNodeId}" title="Выбрать · двойной щелчок — изменить">${safe(node.text||'Новая ветка')}</button>`).join('');
-  return `<section class="mind-studio"><div class="mind-studio-bar"><div><span class="mind-eyebrow">MIND SPACE</span><h2>Разложи мысль по веткам</h2></div><div class="mind-map-controls"><select id="mind-map-select" aria-label="Выбрать карту">${state.maps.map(item=>`<option value="${safe(item.id)}" ${item.id===map.id?'selected':''}>${safe(item.name||'Новая карта')}</option>`).join('')}</select><button data-mind-rename-map title="Переименовать карту" aria-label="Переименовать карту">✎</button><button data-mind-new-map title="Новая карта">＋ Новая карта</button></div></div><div class="mind-canvas" id="mind-canvas"><div class="mind-paper" style="width:${layout.width}px;height:${layout.height}px"><svg class="mind-connections" width="${layout.width}" height="${layout.height}" aria-hidden="true">${lines}</svg>${nodes}</div></div><div class="mind-dock"><div class="mind-edit"><span>Выбрана ветка</span><input id="mind-node-text" maxlength="100" value="${safe(selected.text)}" aria-label="Название выбранной ветки"></div><div class="mind-dock-actions"><button data-mind-action="child" title="Дочерняя ветка · Enter"><b>↳</b><span>Дочерняя</span></button><button data-mind-action="sibling" title="Соседняя ветка · Пробел"><b>＋</b><span>Соседняя</span></button><button data-mind-action="indent" title="Вложить · Tab"><b>→</b><span>Вложить</span></button><button data-mind-action="outdent" title="Извлечь · Shift+Tab"><b>←</b><span>Извлечь</span></button><button data-mind-action="delete" title="Удалить · Delete"><b>×</b><span>Удалить</span></button></div></div><p class="mind-hint">На ноутбуке: <kbd>Enter</kbd> дочерняя · <kbd>Пробел</kbd> соседняя · <kbd>Tab</kbd> вложить · <kbd>F2</kbd> изменить. На телефоне выбери ветку и нажми кнопку снизу.</p></section>`;
+  const nodes = layout.nodes.map(({node, x, y, width, color}) =>
+    mindNodeMarkup(node, node === map.root, `style="left:${x}px;top:${y}px;width:${width}px;--branch:${color}"`)
+  ).join('');
+  function outline(node) {
+    const children = !mindCollapsed.has(node.id) && node.children.length ?
+      `<ul>${node.children.map(outline).join('')}</ul>` : '';
+    return `<li>${mindNodeMarkup(node, node === map.root)}${children}</li>`;
+  }
+  const history = mindHistory.get(map.id);
+  const tools = [
+    ['edit', 'Изменить', 'F2', false],
+    ['child', 'Подветка', 'Tab', false],
+    ['sibling', 'Рядом', 'Enter или пробел', !current.parent],
+    ['fold', mindCollapsed.has(current.node.id) ? 'Развернуть' : 'Свернуть', 'Alt + точка', !current.node.children.length],
+    ['delete', 'Удалить', 'Delete', !current.parent]
+  ];
+  const entrance = mindEntrance ? ' mind-entrance' : '';
+  mindEntrance = false;
+  return `<section class="mind-workspace${entrance}" aria-label="Редактор карты">
+    <div class="mind-toolbar">
+      <div class="mind-map-picker"><select id="mind-map-select" aria-label="Выбрать карту">${state.maps.map(item =>
+        `<option value="${safe(item.id)}" ${item.id === map.id ? 'selected' : ''}>${safe(item.name || 'Новая карта')}</option>`
+      ).join('')}</select><button data-mind-rename-map aria-label="Переименовать карту">✎</button><button data-mind-new-map>＋ Новая</button></div>
+      <div class="mind-modes" aria-label="Вид карты"><button data-mind-mode="map" aria-pressed="${mindMode === 'map'}">Карта</button><button data-mind-mode="outline" aria-pressed="${mindMode === 'outline'}">Список</button></div>
+      <div class="mind-level-controls">
+        <button data-mind-action="undo" aria-label="Отменить" ${history?.undo.length ? '' : 'disabled'}>↶</button><button data-mind-action="redo" aria-label="Повторить" ${history?.redo.length ? '' : 'disabled'}>↷</button>
+        ${mindMode === 'map' ? `<button data-mind-zoom="out" aria-label="Уменьшить масштаб">−</button><button data-mind-zoom="fit" aria-label="Уместить карту" title="Уместить карту">${Math.round(mindZoom * 100)}%</button><button data-mind-zoom="in" aria-label="Увеличить масштаб">＋</button>` : ''}
+      </div>
+    </div>
+    <div id="mind-canvas" class="mind-surface ${mindMode === 'map' ? 'mind-map' : 'mind-outline'}">
+      ${mindMode === 'map' ? `<div class="mind-scroll-size" style="width:${layout.width * mindZoom}px;height:${layout.height * mindZoom}px">
+        <div class="mind-scene" data-width="${layout.width}" data-height="${layout.height}" style="width:${layout.width}px;height:${layout.height}px;transform:scale(${mindZoom})">
+          <svg class="mind-lines" width="${layout.width}" height="${layout.height}" aria-hidden="true">${lines}</svg>${nodes}
+        </div>
+      </div>` : `<ul class="mind-tree">${outline(map.root)}</ul>`}
+    </div>
+    <div class="mind-footer"><div class="mind-tools" aria-label="Действия с веткой">${tools.map(([action, label, shortcut, disabled]) =>
+      `<button type="button" data-mind-action="${action}" title="${shortcut}" ${disabled ? 'disabled' : ''}>${label}</button>`
+    ).join('')}</div>
+    <p><kbd>Tab</kbd> подветка · <kbd>Enter</kbd> рядом · <kbd>F2</kbd> изменить · стрелки — переход</p></div>
+  </section>`;
 }
-function mindRefocus(edit=false) {
-  const old=$('mind-canvas'),left=old?.scrollLeft||0,top=old?.scrollTop||0;
+
+function mindFocusNode() {
+  const node = $('view').querySelector(`[data-mind-node="${CSS.escape(selectedMindNodeId)}"]`);
+  if (!node) return;
+  node.focus({preventScroll:true});
+  const canvas = $('mind-canvas'), rect = canvas.getBoundingClientRect(), target = node.getBoundingClientRect();
+  if (target.left < rect.left + 12) canvas.scrollLeft += target.left - rect.left - 24;
+  if (target.right > rect.right - 48) canvas.scrollLeft += target.right - rect.right + 56;
+  if (target.top < rect.top + 12) canvas.scrollTop += target.top - rect.top - 24;
+  if (target.bottom > rect.bottom - 12) canvas.scrollTop += target.bottom - rect.bottom + 24;
+}
+
+function mindRefocus({edit = false, focus = true} = {}) {
+  const previous = $('mind-canvas');
+  const left = previous?.scrollLeft ?? 0, top = previous?.scrollTop ?? 0;
   render();
-  const canvas=$('mind-canvas'); if(canvas){canvas.scrollLeft=left;canvas.scrollTop=top;}
-  if(edit){$('mind-node-text')?.focus();$('mind-node-text')?.select();}
-  else $('view').querySelector(`[data-mind-node="${CSS.escape(selectedMindNodeId)}"]`)?.focus({preventScroll:true});
+  const canvas = $('mind-canvas');
+  canvas.scrollLeft = left;
+  canvas.scrollTop = top;
+  if (focus) mindFocusNode();
+  if (edit) mindEdit(false);
 }
-function mindEdit(){ $('mind-node-text')?.focus(); $('mind-node-text')?.select(); }
+
+function mindSelectNode(id) {
+  const view = $('view');
+  const previous = view.querySelector('.mind-item.selected');
+  const next = view.querySelector(`[data-mind-node="${CSS.escape(id)}"]`);
+  if (!next) return;
+  previous?.classList.remove('selected');
+  previous?.querySelector('[data-mind-node]')?.setAttribute('aria-pressed', 'false');
+  next.setAttribute('aria-pressed', 'true');
+  next.closest('.mind-item').classList.add('selected');
+  selectedMindNodeId = id;
+  const {node, parent} = mindFind(mindActiveMap().root, id);
+  const tools = view.querySelector('.mind-tools');
+  tools.querySelector('[data-mind-action="sibling"]').disabled = !parent;
+  tools.querySelector('[data-mind-action="delete"]').disabled = !parent;
+  const fold = tools.querySelector('[data-mind-action="fold"]');
+  fold.disabled = !node.children.length;
+  fold.textContent = mindCollapsed.has(id) ? 'Развернуть' : 'Свернуть';
+  mindFocusNode();
+}
+
+function mindRecord(map) {
+  if (!mindHistory.has(map.id)) mindHistory.set(map.id, {undo:[], redo:[]});
+  const history = mindHistory.get(map.id);
+  history.undo.push({root: structuredClone(map.root), name: map.name, selection: selectedMindNodeId});
+  if (history.undo.length > 40) history.undo.shift();
+  history.redo.length = 0;
+  const undo = $('view').querySelector('[data-mind-action="undo"]');
+  const redo = $('view').querySelector('[data-mind-action="redo"]');
+  if (undo) undo.disabled = false;
+  if (redo) redo.disabled = true;
+}
+
+function mindEdit(record = true) {
+  const map = mindActiveMap(), {node} = mindFind(map.root, selectedMindNodeId);
+  const label = $('view').querySelector(`[data-mind-node="${CSS.escape(node.id)}"]`);
+  if (!label || label.hidden) return;
+  const input = document.createElement('input');
+  input.className = 'mind-node-input';
+  input.value = node.text;
+  input.maxLength = 100;
+  input.setAttribute('aria-label', 'Название ветки');
+  label.after(input);
+  label.hidden = true;
+  let cancelled = false;
+  input.addEventListener('blur', () => {
+    if (!cancelled && node.text !== input.value.trim()) {
+      if (record) mindRecord(map);
+      node.text = input.value.trim();
+      if (node === map.root && map.name === 'Новая карта' && node.text) {
+        map.name = node.text.slice(0, 80);
+        $('mind-map-select').selectedOptions[0].textContent = map.name;
+      }
+      save();
+    }
+    label.textContent = node.text || 'Новая ветка';
+    label.title = label.textContent;
+    label.hidden = false;
+    input.remove();
+  }, {once:true});
+  input.addEventListener('keydown', event => {
+    if (event.isComposing || !['Enter', 'Escape'].includes(event.key)) return;
+    event.preventDefault();
+    cancelled = event.key === 'Escape';
+    input.blur();
+    mindRefocus();
+  });
+  input.focus();
+  input.select();
+}
+
+function mindReveal(root, id) {
+  let item = mindFind(root, id);
+  while (item?.parent) {
+    mindCollapsed.delete(item.parent.id);
+    item = mindFind(root, item.parent.id);
+  }
+}
+
 function mindAction(action) {
-  const map=mindActiveMap(),current=mindFind(map.root,selectedMindNodeId);
-  if(!current)return;
-  if(action==='child'||action==='sibling'){
-    const node={id:crypto.randomUUID(),text:'Новая ветка',children:[]};
-    if(action==='child'||!current.parent) current.node.children.push(node);
-    else current.siblings.splice(current.index+1,0,node);
-    selectedMindNodeId=node.id;
-    save();mindRefocus(true);return;
+  const map = mindActiveMap(), current = mindFind(map.root, selectedMindNodeId);
+  if (action === 'edit') { mindEdit(); return; }
+  if (action === 'fold') {
+    if (!current.node.children.length) return;
+    if (!mindCollapsed.delete(current.node.id)) mindCollapsed.add(current.node.id);
+    mindRefocus();
+    return;
   }
-  if(action==='indent'){
-    if(!current.parent||current.index===0)return;
-    current.siblings.splice(current.index,1);current.siblings[current.index-1].children.push(current.node);
-  }else if(action==='outdent'){
-    if(!current.parent||current.parent.id===map.root.id)return;
-    const parent=mindFind(map.root,current.parent.id);
-    current.siblings.splice(current.index,1);parent.siblings.splice(parent.index+1,0,current.node);
-  }else if(action==='delete'){
-    if(!current.parent)return;
-    if(current.node.children.length&&!confirm('Удалить ветку вместе с дочерними ветками?'))return;
-    current.siblings.splice(current.index,1);selectedMindNodeId=current.parent.id;
-  }else return;
-  save();mindRefocus();
+  if (action === 'undo' || action === 'redo') {
+    const history = mindHistory.get(map.id), snapshot = history?.[action].pop();
+    if (!snapshot) return;
+    history[action === 'undo' ? 'redo' : 'undo'].push({root:map.root, name:map.name, selection:selectedMindNodeId});
+    map.root = snapshot.root;
+    map.name = snapshot.name;
+    selectedMindNodeId = snapshot.selection;
+    mindReveal(map.root, selectedMindNodeId);
+  } else if (action === 'child' || action === 'sibling') {
+    mindRecord(map);
+    const node = {id:crypto.randomUUID(), text:'', children:[]};
+    if (action === 'child' || !current.parent) {
+      mindCollapsed.delete(current.node.id);
+      current.node.children.push(node);
+    } else current.siblings.splice(current.index + 1, 0, node);
+    selectedMindNodeId = node.id;
+    save();
+    mindRefocus({edit:true});
+    return;
+  } else if (action === 'delete' && current.parent) {
+    if (current.node.children.length && !confirm('Удалить ветку вместе с дочерними ветками?')) return;
+    mindRecord(map);
+    current.siblings.splice(current.index, 1);
+    selectedMindNodeId = current.siblings[current.index]?.id || current.siblings.at(-1)?.id || current.parent.id;
+  } else if (action === 'indent' && current.parent && current.index > 0) {
+    mindRecord(map);
+    current.siblings.splice(current.index, 1);
+    current.siblings[current.index - 1].children.push(current.node);
+    mindCollapsed.delete(current.siblings[current.index - 1].id);
+  } else if (action === 'outdent' && current.parent && current.parent !== map.root) {
+    mindRecord(map);
+    const parent = mindFind(map.root, current.parent.id);
+    current.siblings.splice(current.index, 1);
+    parent.siblings.splice(parent.index + 1, 0, current.node);
+  } else return;
+  save();
+  mindRefocus();
 }
+
 function mindClick(button) {
-  if(button.hasAttribute('data-mind-rename-map')){
-    const map=mindActiveMap(),name=prompt('Название карты',map.name);
-    if(name?.trim()){map.name=name.trim().slice(0,80);save();render();}return true;
+  if (screen !== 'mind') return false;
+  const {mindNode, mindAction:action, mindUnfold, mindMode:mode, mindZoom:zoom} = button.dataset;
+  if (mindNode) {
+    mindSelectNode(mindNode);
+    return true;
   }
-  if(button.dataset.mindNode){selectedMindNodeId=button.dataset.mindNode;mindRefocus();return true;}
-  if(button.dataset.mindAction){mindAction(button.dataset.mindAction);return true;}
-  if(button.hasAttribute('data-mind-new-map')){
-    const root={id:crypto.randomUUID(),text:'Главная идея',children:[]};
-    const map={id:crypto.randomUUID(),name:'Новая карта',root};
-    state.maps.push(map);activeMapId=map.id;selectedMindNodeId=root.id;save();render();mindEdit();return true;
+  if (action) { mindAction(action); return true; }
+  if (mindUnfold) {
+    selectedMindNodeId = mindUnfold;
+    mindAction('fold');
+    return true;
+  }
+  if (mode) {
+    mindMode = mode;
+    mindRefocus();
+    return true;
+  }
+  if (zoom) {
+    const canvas = $('mind-canvas'), scene = canvas.querySelector('.mind-scene');
+    const fit = Math.min(1, canvas.clientWidth / Number(scene.dataset.width), canvas.clientHeight / Number(scene.dataset.height));
+    mindZoom = zoom === 'fit' ? Math.max(.2, Math.floor(fit * 100) / 100) :
+      Math.min(2, Math.max(.2, Math.round((mindZoom + (zoom === 'in' ? .15 : -.15)) * 100) / 100));
+    mindRefocus({focus:false});
+    if (zoom === 'fit') {
+      $('mind-canvas').scrollTo(0, 0);
+    }
+    $('view').querySelector(`[data-mind-zoom="${zoom}"]`)?.focus({preventScroll:true});
+    return true;
+  }
+  if (button.hasAttribute('data-mind-rename-map')) {
+    const map = mindActiveMap(), name = prompt('Название карты', map.name);
+    if (name?.trim() && name.trim() !== map.name) {
+      mindRecord(map);
+      map.name = name.trim().slice(0, 80);
+      save();
+      mindRefocus();
+    }
+    return true;
+  }
+  if (button.hasAttribute('data-mind-new-map')) {
+    const root = {id:crypto.randomUUID(), text:'Главная идея', children:[]};
+    const map = {id:crypto.randomUUID(), name:'Новая карта', root};
+    state.maps.push(map);
+    activeMapId = map.id;
+    selectedMindNodeId = root.id;
+    mindZoom = 1;
+    mindEntrance = true;
+    save();
+    render();
+    mindEdit(false);
+    return true;
   }
   return false;
 }
-function mindChooseMap(id){activeMapId=id;selectedMindNodeId=null;render();}
-function mindInput(target) {
-  if(target.id!=='mind-node-text')return false;
-  const map=mindActiveMap(),current=mindFind(map.root,selectedMindNodeId);
-  if(!current)return true;
-  current.node.text=target.value;save();
-  const button=$('view').querySelector(`[data-mind-node="${CSS.escape(selectedMindNodeId)}"]`);
-  if(button)button.textContent=target.value||'Новая ветка';
-  if(current.node.id===map.root.id&&map.name==='Новая карта'){
-    map.name=target.value||'Новая карта';const option=$('mind-map-select')?.selectedOptions[0];if(option)option.textContent=map.name;save();
-  }
-  return true;
+
+function mindChooseMap(id) {
+  activeMapId = id;
+  selectedMindNodeId = null;
+  mindZoom = 1;
+  mindEntrance = true;
+  render();
+  $('mind-map-select').focus({preventScroll:true});
 }
+
 function mindKeydown(event) {
-  if(screen!=='mind'||!event.target.closest?.('[data-mind-node]'))return;
-  if(event.key===' '){event.preventDefault();mindAction('sibling');}
-  else if(event.key==='Enter'){event.preventDefault();mindAction('child');}
-  else if(event.key==='Tab'){
-    const current=mindFind(mindActiveMap().root,selectedMindNodeId);
-    if(event.shiftKey?current?.parent?.id!==mindActiveMap().root.id:current?.parent&&current.index>0){event.preventDefault();mindAction(event.shiftKey?'outdent':'indent');}
-  }else if(event.key==='F2'){event.preventDefault();mindEdit();}
-  else if(event.key==='Delete'||event.key==='Backspace'){event.preventDefault();mindAction('delete');}
+  if (screen !== 'mind' || event.isComposing) return;
+  const label = event.target.closest('[data-mind-node]');
+  if (!label) return;
+  selectedMindNodeId = label.dataset.mindNode;
+  const map = mindActiveMap(), current = mindFind(map.root, selectedMindNodeId);
+  let action;
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') action = event.shiftKey ? 'redo' : 'undo';
+  else if (event.altKey && event.code === 'Period') action = 'fold';
+  else if (event.altKey && event.key === 'ArrowRight') action = 'indent';
+  else if (event.altKey && event.key === 'ArrowLeft') action = 'outdent';
+  else if (event.metaKey || event.ctrlKey || event.altKey) return;
+  else if (event.key === 'Tab' && !event.shiftKey) action = 'child';
+  else if (event.key === ' ' || event.key === 'Enter') action = 'sibling';
+  else if (event.key === 'F2') action = 'edit';
+  else if (event.key === 'Delete' || event.key === 'Backspace') action = 'delete';
+  if (action) {
+    event.preventDefault();
+    if (!event.repeat) mindAction(action);
+    return;
+  }
+  const visible = [...$('view').querySelectorAll('[data-mind-node]')];
+  const index = visible.indexOf(label);
+  const id = {
+    ArrowLeft: current.parent?.id,
+    ArrowRight: !mindCollapsed.has(current.node.id) && current.node.children[0]?.id,
+    ArrowUp: visible[index - 1]?.dataset.mindNode,
+    ArrowDown: visible[index + 1]?.dataset.mindNode
+  }[event.key];
+  if (id) {
+    event.preventDefault();
+    mindSelectNode(id);
+  }
+}
+
+function startMindPan() {
+  const view = $('view');
+  let pan = null;
+  view.addEventListener('pointerdown', event => {
+    const canvas = event.target.closest('.mind-map');
+    if (!canvas || event.pointerType !== 'mouse' || event.button !== 0 ||
+      event.target.closest('button, input')) return;
+    pan = {canvas, id:event.pointerId, x:event.clientX, y:event.clientY, left:canvas.scrollLeft, top:canvas.scrollTop};
+    canvas.setPointerCapture(event.pointerId);
+    canvas.classList.add('is-panning');
+  });
+  view.addEventListener('pointermove', event => {
+    if (pan?.id !== event.pointerId) return;
+    pan.canvas.scrollLeft = pan.left + pan.x - event.clientX;
+    pan.canvas.scrollTop = pan.top + pan.y - event.clientY;
+  });
+  view.addEventListener('lostpointercapture', event => {
+    if (pan?.id !== event.pointerId) return;
+    pan.canvas.classList.remove('is-panning');
+    pan = null;
+  });
 }

@@ -67,15 +67,6 @@ function lineChart(days) {
   const dates=days.map((date,index)=>dense && index % 5 !== 0 && index !== days.length-1 ? '' : `<text x="${x(index)}" y="203" text-anchor="middle" class="axis-label">${short(date)}</text>`).join('');
   return `<section class="panel line-panel"><div class="panel-head"><div><h2>Выполнение привычек по дням</h2><small>Средний процент выполнения всех привычек, запланированных на день</small></div></div><div class="chart-scroll"><svg class="productivity-chart" viewBox="0 0 700 215" role="img" aria-label="Выполнение привычек по датам: ${values.map((value,index)=>value===null?'':short(days[index])+' — '+value+'%').filter(Boolean).join(', ')}">${grid}<path d="${path}" class="line-path"/>${dots}${dates}</svg></div></section>`;
 }
-function victorySeries() {
-  const won=date=>{const day=dailyProductivity(date);return day.planned>0&&day.percent>=70;};
-  let count=0;
-  let cursor=won(today)?today:shift(today,-1);
-  while(count<365&&won(cursor)){count++;cursor=shift(cursor,-1);}
-  const days=Array.from({length:7},(_,index)=>shift(today,index-6));
-  const word=count%10===1&&count%100!==11?'день':count%10>=2&&count%10<=4&&(count%100<12||count%100>14)?'дня':'дней';
-  return `<section class="victory-panel"><div><span class="victory-eyebrow">СЕРИЯ ПОБЕД</span><div class="victory-count"><strong>${count}</strong><span>${word} подряд</span></div><p>${count?'Твой ритм уже складывается. Продолжай в своём темпе.':'Выполни 70% привычек за день, чтобы начать серию.'}</p></div><div class="victory-days">${days.map(date=>`<div class="${won(date)?'won':''} ${key(date)===key(today)?'current':''}"><span>${weekdays[weekday(date)]}</span><b>${won(date)?'✓':'·'}</b></div>`).join('')}</div></section>`;
-}
 function notesScreen() {
   const filtered = state.notes
     .filter(note => (note.title + ' ' + note.body).toLocaleLowerCase('ru').includes(noteQuery.toLocaleLowerCase('ru')))
@@ -119,9 +110,9 @@ function render() {
   screen = Object.hasOwn(screens, route) || module ? route : 'home';
   const isCore = Object.hasOwn(screens, screen);
   const isHome = screen === 'home';
+  if (screen !== 'mind') mindEntrance = true;
   document.body.classList.toggle('home-page', isHome);
   document.body.classList.toggle('notes-page', screen==='notes');
-  document.body.classList.toggle('mind-page', screen==='mind');
   document.body.classList.toggle('note-editing', screen==='notes' && !!activeNoteId);
   $('back').hidden=isHome;
   const current = route === 'sections' ? 'sections' : screen;
@@ -133,16 +124,9 @@ function render() {
   $('today').hidden=isHome;
   $('title').textContent = isHome ? 'Сегодня' : screens[screen] || module.title;
   $('primary').hidden = !isCore && screen!=='notes' && screen!=='tasks';
-  document.querySelector('.tabs').hidden = !isCore;
   document.querySelector('.toolbar').hidden = !isCore && screen !== 'analytics';
   $('primary').textContent = screen === 'habits' ? '＋ Привычка' : screen==='notes'?'＋ Новая заметка':screen==='tasks'?'＋ Задача':'＋ Событие';
   $('today').textContent = fmt(today, { weekday: 'long', day: 'numeric', month: 'long' });
-  document.querySelectorAll('.tabs a').forEach(link => {
-    const active = link.hash === '#' + screen;
-    link.classList.toggle('active-link', active);
-    if (active) link.setAttribute('aria-current', 'page');
-    else link.removeAttribute('aria-current');
-  });
   const days = week(focusDate);
   $('period').textContent = screen === 'calendar' || (screen === 'habits' && habitRange === 'month')
     ? fmt(focusDate, { month: 'long', year: 'numeric' })
@@ -158,6 +142,7 @@ function render() {
     mind: mindScreen,
     goals: goalsScreen
   };
+  $('view').querySelector('.mind-node-input')?.blur();
   const horizontal = $('orbit-scroll')?.scrollLeft;
   $('view').innerHTML = views[screen]();
   if (horizontal !== undefined && $('orbit-scroll')) $('orbit-scroll').scrollLeft = horizontal;
@@ -279,7 +264,6 @@ $('view').addEventListener('input',e=>{
     journalUpdate('sleep',value);
   }
   if(e.target.dataset.journalField)journalUpdate(e.target.dataset.journalField,e.target.value);
-  if(mindInput(e.target))return;
   if(e.target.id==='note-search'){
     noteQuery=e.target.value;
     const position=e.target.selectionStart;
@@ -331,5 +315,7 @@ function focusSections() {
   $('sections')?.scrollIntoView();
 }
 render();
+startTodayQuoteClock();
+startMindPan();
 startStarfield();
 if (location.hash === '#sections') requestAnimationFrame(focusSections);

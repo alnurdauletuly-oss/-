@@ -14,7 +14,8 @@ function startStarfield() {
   ];
   let width = 0, height = 0, frame = 0, lastFrame = 0, elapsed = 0;
   let lastScroll = window.scrollY, boost = 0, bank = 0;
-  let comet = null, previousRoute = -1, nextComet = 3;
+  const cometFrequency = 1.15;
+  let comet = null, previousRoute = -1, nextComet = 3 / cometFrequency;
 
   function drawStar(star, dt, still) {
     const x = star.x * width, y = star.y * height;
@@ -70,13 +71,13 @@ function startStarfield() {
         duration: 0.85 + Math.random() * 0.58, start: elapsed,
         hue: Math.random() < 0.65 ? '178,213,255' : '255,220,177'
       };
+      nextComet = elapsed + (comet.duration + 5 + Math.random() * 6) / cometFrequency;
       previousRoute = route;
     }
     if (!comet) return;
     const p = (elapsed - comet.start) / comet.duration;
     if (p >= 1) {
       comet = null;
-      nextComet = elapsed + 5 + Math.random() * 6;
       return;
     }
     const dx = (comet.toX - comet.fromX) * width;

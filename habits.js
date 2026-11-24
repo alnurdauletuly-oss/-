@@ -19,18 +19,16 @@ function habitScheduled(habit, date) {
   return habit.done.includes(day) || ((!habit.created || day >= habit.created) && habit.days.includes(weekday(date)));
 }
 
-function habitStreak(habit) {
-  let cursor = new Date(today);
-  if (!habit.done.includes(key(cursor))) cursor = shift(cursor, -1);
-  let count = 0;
+function habitStreak(habit, elapsed) {
   const completed = new Set(habit.done);
-  if (!habit.days.length) return 0;
-  while (!habitScheduled(habit, cursor) && (!habit.created || key(cursor) >= habit.created)) cursor = shift(cursor, -1);
-  while (habitScheduled(habit, cursor)) {
-    if (!completed.has(key(cursor))) return count;
+  let count = 0;
+  for (const date of elapsed.slice().reverse()) {
+    const day = key(date);
+    if (!completed.has(day)) {
+      if (day === key(today)) continue;
+      break;
+    }
     count++;
-    cursor = shift(cursor, -1);
-    while (!habitScheduled(habit, cursor) && (!habit.created || key(cursor) >= habit.created)) cursor = shift(cursor, -1);
   }
   return count;
 }
@@ -39,7 +37,7 @@ function habitSummary(habit, days) {
   const elapsed = days.filter(date => date <= today && habitScheduled(habit, date));
   const done = elapsed.filter(date => habit.done.includes(key(date))).length;
   const percent = elapsed.length ? Math.round(done / elapsed.length * 100) : null;
-  return {done, count:elapsed.length, percent, streak:habitStreak(habit)};
+  return {done, count:elapsed.length, percent, streak:habitStreak(habit, elapsed)};
 }
 
 function habitRow({habit, color, percent, streak}, dates) {
@@ -59,6 +57,31 @@ function habitRow({habit, color, percent, streak}, dates) {
     <th scope="row" class="habit-name"><button type="button" data-habit-edit="${safe(habit.id)}" aria-label="Изменить привычку: ${safe(habit.name)}"><i aria-hidden="true"></i><span>${safe(habit.name)}${habit.description ? `<small>${safe(habit.description)}</small>` : ''}</span></button></th>
     ${cells}<td class="habit-score"><span class="habit-streak ${streak ? 'is-lit' : ''}" aria-label="Серия: ${streak}"><span aria-hidden="true">🔥</span> ${streak}</span><strong>${percent === null ? '—' : percent+'%'}</strong></td>
   </tr>`;
+}
+
+function victorySeries(dates) {
+  const todayKey = key(today);
+  const days = dates.map(date => {
+    const {planned, percent} = dailyProductivity(date);
+    const day = key(date);
+    return {date, day, planned, won: day <= todayKey && planned > 0 && percent >= 70};
+  });
+  let count = 0;
+  for (const {day, planned, won} of days.slice().reverse()) {
+    if (day > todayKey || !planned || (day === todayKey && !won)) continue;
+    if (!won) break;
+    count++;
+  }
+  const word = count % 10 === 1 && count % 100 !== 11 ? 'день' :
+    count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14) ? 'дня' : 'дней';
+  const monthly = dates.length > 7;
+  return `<section class="victory-panel ${monthly ? 'victory-month' : ''}">
+    <div><span class="victory-eyebrow">СЕРИЯ ПОБЕД</span><div class="victory-count"><strong>${count}</strong><span>${word} подряд</span></div>
+    <p>Победа — от 70% привычек за день. Свободные дни сохраняют серию.</p></div>
+    <div class="victory-days" role="group" aria-label="Победы за выбранный период">${days.map(({date, day, won}) =>
+      `<div class="${won ? 'won' : ''} ${day === todayKey ? 'current' : ''}" role="group" aria-label="${short(date)}, ${won ? 'победа' : 'без победы'}"><span>${monthly ? date.getDate() : weekdays[weekday(date)]}</span><b aria-hidden="true">${won ? '🔥' : '·'}</b></div>`
+    ).join('')}</div>
+  </section>`;
 }
 
 function habitsScreen() {
@@ -87,7 +110,7 @@ function habitsScreen() {
     ${metric('Требует внимания', measured.length > 1 ? measured.at(-1) : null)}
     <article class="panel orbit-stat"><span>Среднее по привычкам</span><strong>${average === null ? '—' : average+'%'}</strong><p>${measured.length} в расчёте</p></article>
     <article class="panel orbit-stat"><span>Общий уровень</span><strong>${level}</strong><progress aria-label="Отметки до следующего уровня" value="${marks % 10}" max="10"></progress><p>${10 - marks % 10} до следующего</p></article>
-  </div>${victorySeries()}${lineChart(dates)}`;
+  </div>${victorySeries(dates)}${lineChart(dates)}`;
 }
 
 function habitsClick(button) {

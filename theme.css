@@ -138,16 +138,16 @@ progress::-webkit-progress-value { background: var(--lime); }
 .victory-days .won b { background: var(--lime); color: var(--bg); }
 .victory-days .current b { outline-color: var(--lime); }
 
-form input:not([type=checkbox]), select, .journal-datebar input, .sleep-input input, .mind-edit input { background: var(--field); border-color: var(--line); color: var(--text); }
-.notes-app, .journal-main, .journal-side, .goal-new, .goal-card, .goals-empty, .mind-studio, .mind-studio-bar, .mind-dock, .mind-hint { background: var(--panel); border-color: var(--line); color: var(--text); }
+form input:not([type=checkbox]), select, .journal-datebar input, .sleep-input input { background: var(--field); border-color: var(--line); color: var(--text); }
+.notes-app, .journal-main, .journal-side, .goal-new, .goal-card, .goals-empty { background: var(--panel); border-color: var(--line); color: var(--text); }
 .notes-list, .notes-search, .journal-field, .reflection-card, .journal-hint { background: var(--side); border-color: var(--line); }
-.notes-list-head, .note-placeholder h2, .goals-empty h2, .mind-studio-bar h2 { color: var(--text); }
+.notes-list-head, .note-placeholder h2, .goals-empty h2 { color: var(--text); }
 .note-item:hover, .note-item.selected, .journal-week button.selected { background: var(--accent-wash); }
 .note-item span, .note-item small, .note-placeholder, .mood-options button small, .goal-why, .goal-meter span, .goal-deadline { color: var(--muted); }
 #note-title { color: var(--text); }
 .mood-options button { background: var(--side); }
 .mood-options button.active, .energy-options button.active { background: var(--accent-wash); border-color: var(--lime); color: var(--lime); box-shadow: none; }
-.goal-card-head button, .goal-add-step button, .mind-map-controls button, .mind-dock-actions button { background: var(--accent-wash); border-color: #435433; color: var(--lime); }
+.goal-card-head button, .goal-add-step button { background: var(--accent-wash); border-color: #435433; color: var(--lime); }
 .goal-add-step button { flex: none; }
 .goal-meter { margin-top: 16px; }
 .goal-meter b { color: var(--lime); }
@@ -155,11 +155,6 @@ form input:not([type=checkbox]), select, .journal-datebar input, .sleep-input in
 .goal-step > label:first-child { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .goal-step > .goal-schedule { display: grid; gap: 2px; font-size: .75rem; color: var(--muted); }
 .goal-schedule input { min-width: 0; max-width: 100%; color: var(--text); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
-.mind-canvas { background-color: var(--field); background-image: radial-gradient(#35413a 1px, transparent 1px); border-color: var(--line); }
-.mind-map-controls select { background: var(--side); }
-.mind-branch { color: var(--text); }
-.mind-branch.mind-root, .mind-branch:hover, .mind-branch.selected { background: #222b27; }
-.mind-eyebrow, .mind-hint kbd { color: var(--lime); }
 
 @media (max-width: 930px) {
   .today-grid { grid-template-columns: 1fr 1fr; }
@@ -173,7 +168,6 @@ form input:not([type=checkbox]), select, .journal-datebar input, .sleep-input in
   .today-grid { grid-template-columns: minmax(0,1fr); }
   .home-page .module-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .today-glow { height: 330px; top: 135px; }
-  .mind-page .mind-dock { background: var(--panel); }
 }
 @media (max-width: 420px) {
   .site-links { gap: 0 13px; }
