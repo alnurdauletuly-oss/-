@@ -314,8 +314,8 @@ function focusSections() {
   $('sections')?.focus({preventScroll:true});
   $('sections')?.scrollIntoView();
 }
+startStarfield();
 render();
 startTodayQuoteClock();
 startMindPan();
-startStarfield();
 if (location.hash === '#sections') requestAnimationFrame(focusSections);
