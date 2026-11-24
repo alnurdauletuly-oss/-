@@ -14,9 +14,13 @@ function habitDates() {
   return Array.from({length:count}, (_, index) => new Date(year, month, index + 1, 12));
 }
 
+function habitPaused(habit, day) {
+  return habit.paused?.includes(day) && !habit.done.includes(day);
+}
+
 function habitScheduled(habit, date) {
   const day = key(date);
-  return habit.done.includes(day) || ((!habit.created || day >= habit.created) && habit.days.includes(weekday(date)));
+  return !habitPaused(habit, day) && (habit.done.includes(day) || ((!habit.created || day >= habit.created) && habit.days.includes(weekday(date))));
 }
 
 function habitStreak(habit, elapsed) {
@@ -45,6 +49,7 @@ function habitRow({habit, color, percent, streak}, dates) {
   const cells = dates.map((date, index) => {
     const day = key(date);
     const checked = completed[index];
+    if (habitPaused(habit, day)) return '<td class="habit-day habit-paused" aria-label="Пауза" title="Пауза"><span aria-hidden="true">Ⅱ</span></td>';
     if (!habitScheduled(habit, date)) return '<td class="habit-day habit-rest" aria-label="Свободный день">·</td>';
     const classes = [checked && completed[index - 1] && 'join-left', checked && completed[index + 1] && 'join-right'];
     if (lastHabitMark?.id === habit.id && lastHabitMark.date === day) classes.push('just-marked');
@@ -62,9 +67,9 @@ function habitRow({habit, color, percent, streak}, dates) {
 function victorySeries(dates) {
   const todayKey = key(today);
   const days = dates.map(date => {
-    const {planned, percent} = dailyProductivity(date);
+    const {planned, percent, paused} = dailyProductivity(date);
     const day = key(date);
-    return {date, day, planned, won: day <= todayKey && planned > 0 && percent >= 70};
+    return {date, day, planned, paused:!planned && paused > 0, won: day <= todayKey && planned > 0 && percent >= 70};
   });
   let count = 0;
   for (const {day, planned, won} of days.slice().reverse()) {
@@ -78,8 +83,8 @@ function victorySeries(dates) {
   return `<section class="victory-panel ${monthly ? 'victory-month' : ''}">
     <div><span class="victory-eyebrow">СЕРИЯ ПОБЕД</span><div class="victory-count"><strong>${count}</strong><span>${word} подряд</span></div>
     <p>Победа — от 70% привычек за день. Свободные дни сохраняют серию.</p></div>
-    <div class="victory-days" role="group" aria-label="Победы за выбранный период">${days.map(({date, day, won}) =>
-      `<div class="${won ? 'won' : ''} ${day === todayKey ? 'current' : ''}" role="group" aria-label="${short(date)}, ${won ? 'победа' : 'без победы'}"><span>${monthly ? date.getDate() : weekdays[weekday(date)]}</span><b aria-hidden="true">${won ? '🔥' : '·'}</b></div>`
+    <div class="victory-days" role="group" aria-label="Победы за выбранный период">${days.map(({date, day, won, paused}) =>
+      `<div class="${won ? 'won' : ''} ${day === todayKey ? 'current' : ''}" role="group" aria-label="${short(date)}, ${won ? 'победа' : paused ? 'пауза' : 'без победы'}"><span>${monthly ? date.getDate() : weekdays[weekday(date)]}</span><b aria-hidden="true">${won ? '🔥' : paused ? 'Ⅱ' : '·'}</b></div>`
     ).join('')}</div>
   </section>`;
 }
@@ -121,10 +126,42 @@ function habitsClick(button) {
     $('view').querySelector(`[data-habit-range="${range}"]`)?.focus({preventScroll:true});
     return true;
   }
+  const paused = button.dataset.habitPause;
+  if (paused) {
+    const habit = state.habits.find(item => item.id === paused);
+    if (toggleHabitPause(habit)) {
+      render();
+      $('view').querySelector(`[data-habit-pause="${CSS.escape(paused)}"]`)?.focus({preventScroll:true});
+    }
+    return true;
+  }
   const habit = state.habits.find(item => item.id === id);
   if (!habit) return false;
   openEditor('habit', key(focusDate), {habit});
   return true;
+}
+
+function canToggleHabitPause(habit, date) {
+  const day = key(date);
+  return habit && !habit.done.includes(day) && (habitScheduled(habit, date) || habitPaused(habit, day));
+}
+
+function toggleHabitPause(habit) {
+  const now = new Date();
+  if (!canToggleHabitPause(habit, now)) return false;
+  const day = key(now);
+  const previous = habit.paused;
+  habit.paused = habitPaused(habit, day) ? previous.filter(item => item !== day) : [...(previous || []), day];
+  if (save()) return true;
+  habit.paused = previous;
+  return false;
+}
+
+function updateHabitPauseButton(habit) {
+  const button = $('habit-pause');
+  const now = new Date();
+  button.hidden = !canToggleHabitPause(habit, now);
+  button.textContent = habit && habitPaused(habit, key(now)) ? 'Возобновить сегодня' : 'Пауза на сегодня';
 }
 
 function saveHabit(name, habit) {

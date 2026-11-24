@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#05080A"><title>JOSPAT · Моё пространство</title>
-  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="workspace.css"><script defer src="hub.js"></script><script defer src="journal.js"></script><script defer src="mind.js"></script><script defer src="goals.js"></script><script defer src="today.js"></script><script defer src="habits.js"></script><script defer src="planner.js"></script><script defer src="space.js"></script><script defer src="app.js"></script>
+  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="theme.css?v=day-review"><link rel="stylesheet" href="workspace.css?v=day-review"><script defer src="hub.js?v=day-review"></script><script defer src="journal.js?v=day-review"></script><script defer src="mind.js"></script><script defer src="goals.js?v=day-review"></script><script defer src="today.js?v=day-review"></script><script defer src="habits.js?v=day-review"></script><script defer src="planner.js?v=day-review"></script><script defer src="space.js"></script><script defer src="backup.js?v=day-review"></script><script defer src="app.js?v=day-review"></script>
 </head>
 <body>
   <div class="site-nav">
     <a class="brand" href="#home" aria-label="JOSPAT — все разделы">jospat<span>.</span></a>
     <nav class="site-links" aria-label="Навигация"><a href="#tasks">Задачи</a><a href="#calendar">Календарь</a><a href="#goals">Цели</a><a href="#sections">Все разделы</a></nav>
-    <div class="identity"><span class="avatar">А</span><span>Алинур</span></div>
+    <div class="identity"><span class="avatar">А</span><span>Алинур</span><button type="button" id="open-backup" title="Резервная копия" aria-label="Резервная копия"><span aria-hidden="true">↓</span> Копия</button></div>
   </div>
   <canvas id="starfield" aria-hidden="true"></canvas>
   <main>
@@ -35,6 +35,27 @@
       <label for="task-priority">Приоритет</label><select id="task-priority"><option value="0">Обычный</option><option value="1">Важный</option><option value="2">Срочный</option></select>
     </div>
     <button type="submit" class="primary">Сохранить</button>
+    <button type="button" id="habit-pause" hidden>Пауза на сегодня</button>
     <button type="button" id="habit-delete" class="danger-action" hidden>Удалить привычку</button>
   </form></dialog>
+  <dialog id="close-day" aria-labelledby="close-day-title"><form id="close-day-form">
+    <div class="dialog-head"><h2 id="close-day-title">Итог дня</h2><button type="button" id="close-day-cancel" aria-label="Закрыть итог дня">×</button></div>
+    <p id="close-day-summary" class="dialog-summary"></p>
+    <label for="close-day-win">Что сегодня получилось?</label>
+    <textarea id="close-day-win" rows="3" maxlength="600" placeholder="Запиши одну победу дня"></textarea>
+    <label for="close-day-task">Первый шаг на завтра</label>
+    <select id="close-day-task"></select>
+    <label id="close-day-new-task" hidden>Название шага<input id="close-day-task-name" maxlength="90"></label>
+    <p id="close-day-error" role="status"></p>
+    <button type="submit" class="primary">Сохранить итог</button>
+  </form></dialog>
+  <dialog id="backup" aria-labelledby="backup-title">
+    <div class="dialog-head"><h2 id="backup-title">Резервная копия</h2><button type="button" id="backup-close" aria-label="Закрыть резервное копирование">×</button></div>
+    <p class="dialog-summary">Сохрани все записи в один файл или восстанови их на другом устройстве.</p>
+    <button type="button" id="backup-export">Скачать копию</button>
+    <label class="backup-file" for="backup-file">Файл для восстановления</label>
+    <input type="file" id="backup-file" accept=".json,application/json">
+    <p id="backup-status" role="status"></p>
+    <button type="button" id="backup-restore" class="primary" hidden>Заменить данные этой копией</button>
+  </dialog>
 </body></html>

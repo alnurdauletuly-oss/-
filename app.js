@@ -41,9 +41,14 @@ function seed() {
     id:'task-'+i, name, date:key(today), done:i===0
   }));
 }
-function save() {
-  try { localStorage.setItem(storageKey,JSON.stringify(state)); }
-  catch { $('status').textContent='Браузер не смог сохранить изменения на устройстве.'; }
+function save(data = state) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(data));
+    return true;
+  } catch {
+    $('status').textContent = 'Браузер не смог сохранить изменения на устройстве.';
+    return false;
+  }
 }
 try {
   const saved = JSON.parse(localStorage.getItem(storageKey));
@@ -53,8 +58,9 @@ try {
 
 function dailyProductivity(date) {
   const plannedHabits=state.habits.filter(habit=>habitScheduled(habit, date));
+  const paused=state.habits.filter(habit=>habitPaused(habit,key(date))).length;
   const done=plannedHabits.filter(habit=>habit.done.includes(key(date))).length;
-  return {date,planned:plannedHabits.length,done,percent:plannedHabits.length?Math.round(done/plannedHabits.length*100):null};
+  return {date,planned:plannedHabits.length,done,paused,percent:plannedHabits.length?Math.round(done/plannedHabits.length*100):null};
 }
 function lineChart(days) {
   const values=days.map(date=>date<=today?dailyProductivity(date).percent:null);
@@ -104,6 +110,12 @@ function calendar() {
   return `<div class="calendar">${cells.join('')}</div><section class="panel calendar-detail"><div class="panel-head"><div><h2>${fmt(focusDate,{weekday:'long',day:'numeric',month:'long'})}</h2><small>События, задачи и шаги к целям</small></div><div class="calendar-add"><button data-add-task="${selected}">＋ Задача</button><button class="primary" data-add-event="${selected}">＋ Событие</button></div></div><div class="event-list">${events.length?events.map(event=>`<div class="event-row"><time>${safe(event.time)}</time><span>${safe(event.name)}</span><button data-delete-event="${safe(event.id)}" aria-label="Удалить событие ${safe(event.name)}">×</button></div>`).join(''):'<p class="muted">Пока нет событий. Добавь важное на этот день.</p>'}</div>${goalRows}${state.tasks.filter(task=>task.date===selected).map(task=>`<label class="calendar-task"><input class="check" type="checkbox" data-task="${safe(task.id)}" ${task.done?'checked':''}>${safe(task.name)}</label>`).join('')}</section>`;
 }
 function render() {
+  const now = new Date();
+  if (key(now) !== key(today)) {
+    if (key(focusDate) === key(today)) focusDate = new Date(now);
+    if (key(plannerDate) === key(today)) plannerDate = new Date(now);
+    today.setFullYear(now.getFullYear(), now.getMonth(), now.getDate());
+  }
   const route = location.hash.slice(1);
   if(route==='weekly'){location.replace('#habits');return;}
   const module = modules.find(item => item.id === route);
@@ -175,6 +187,7 @@ function openEditor(type, date=key(focusDate), options={}) {
   $('template-fields').hidden = !isHabit || Boolean(habit);
   $('habit-fields').hidden = !isHabit;
   $('habit-delete').hidden = !habit;
+  updateHabitPauseButton(habit);
   $('schedule-fields').hidden = !isHabit;
   $('task-fields').hidden = isHabit;
   $('planner-fields').hidden = !isTask;
@@ -204,6 +217,13 @@ $('habit-palette').onclick = event => {
   $('habit-palette').querySelector(`[data-color="${color}"]`)?.focus();
 };
 $('habit-color').oninput = updateHabitPalette;
+$('habit-pause').onclick = () => {
+  const habit = editorOptions.habit;
+  if (toggleHabitPause(habit)) {
+    updateHabitPauseButton(habit);
+    render();
+  }
+};
 $('habit-delete').onclick = () => {
   const habit = editorOptions.habit;
   if (!habit || !confirm(`Удалить привычку «${habit.name}» и её отметки?`)) return;
@@ -240,9 +260,9 @@ $('entry').onsubmit=e=>{
   save();$('editor').close();render();
 };
 $('view').onclick=e=>{
+  if (e.target.closest('[data-today-planner]')) plannerDate = new Date();
   const button=e.target.closest('button');
   if(!button)return;
-  if(button.hasAttribute('data-today-start')) { focusTodayHabits(); return; }
   if(habitsClick(button) || plannerClick(button)) return;
   if(journalClick(button))return;
   if(mindClick(button))return;
@@ -295,6 +315,7 @@ $('view').onchange=e=>{
   if(box.dataset.habit){
     const habit=state.habits.find(h=>h.id===box.dataset.habit);
     const date=box.dataset.date;
+    if (!habit || habitPaused(habit, date)) return;
     habit.done=habit.done.filter(d=>d!==date);
     if(box.checked)habit.done.push(date);
     lastHabitMark = box.checked ? {id:habit.id,date} : null;
@@ -317,5 +338,7 @@ function focusSections() {
 startStarfield();
 render();
 startTodayQuoteClock();
+startCloseDay();
+startBackup();
 startMindPan();
 if (location.hash === '#sections') requestAnimationFrame(focusSections);

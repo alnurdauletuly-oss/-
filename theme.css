@@ -33,28 +33,24 @@ main > header h1 { font-family: var(--display-font); font-weight: 400; letter-sp
 
 .home-page main { padding-top: 0; }
 .today-stage { position: relative; isolation: isolate; }
-.today-hero { position: relative; z-index: 1; text-align: center; padding: clamp(42px, 5vw, 76px) 0 clamp(38px, 5vw, 66px); }
-.today-date { color: var(--muted); font: .875rem/1.5 ui-monospace, monospace; margin-bottom: 20px; }
+.today-hero { position: relative; z-index: 1; text-align: center; padding: clamp(22px, 3.5vw, 52px) 0 clamp(18px, 2.5vw, 32px); }
+.today-date { color: var(--muted); font: .875rem/1.5 ui-monospace, monospace; margin-bottom: 8px; }
 .today-date::first-letter { text-transform: uppercase; }
 .today-hero h1 {
   font-family: var(--display-font);
-  font-size: clamp(59px, 8.3vw, 116px);
+  font-size: clamp(46px, 6vw, 89px);
   font-weight: 400;
   line-height: .91;
   letter-spacing: -.072em;
 }
 .today-hero h1 em { color: var(--lime); font-weight: inherit; }
-.today-lead { max-width: 430px; margin: 24px auto 0; color: var(--muted); font-size: 1rem; }
-.hero-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 22px; margin-top: 24px; }
-.hero-actions .primary { border-radius: 100px; }
-.hero-actions > a { padding: 10px 2px; font-size: .875rem; color: var(--text); }
-.hero-actions > a:hover { color: var(--lime); }
+.today-lead { max-width: 430px; margin: 14px auto 0; color: var(--muted); font-size: .9375rem; }
 .today-glow {
   position: absolute;
   pointer-events: none;
   width: min(100%, 950px);
   height: 390px;
-  top: clamp(105px, 20vw, 242px);
+  top: clamp(64px, 9vw, 112px);
   left: 50%;
   transform: translateX(-50%);
   z-index: -1;
@@ -88,7 +84,6 @@ main > header h1 { font-family: var(--display-font); font-weight: 400; letter-sp
 .today-check:last-child { border-bottom: 0; }
 .today-check .check, .goal-step .check, .calendar-goal .check { flex: none; }
 .today-check:has(:checked) span { color: var(--muted); text-decoration: line-through; }
-.today-card .today-context { color: var(--lime); margin-bottom: 4px; }
 .today-step { margin-bottom: 10px; }
 .today-event { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; }
 .today-card .today-event-title { margin: 5px 0; color: var(--text); }
@@ -157,8 +152,7 @@ form input:not([type=checkbox]), select, .journal-datebar input, .sleep-input in
 .goal-schedule input { min-width: 0; max-width: 100%; color: var(--text); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
 
 @media (max-width: 930px) {
-  .today-grid { grid-template-columns: 1fr 1fr; }
-  #today-habits { grid-column: 1 / -1; }
+  .today-grid { grid-template-columns: 1fr 1fr 1fr; }
 }
 @media (max-width: 700px) {
   .site-nav { grid-template-columns: 1fr auto; gap: 0 8px; padding-top: 10px; }

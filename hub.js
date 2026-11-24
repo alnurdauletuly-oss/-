@@ -28,7 +28,7 @@ function illustration(type) {
 }
 
 function homeScreen() {
-  return todayScreen() + plannerScreen() + `<section class="today-library" id="sections" tabindex="-1" aria-labelledby="sections-title"><h2 id="sections-title">Все разделы</h2><div class="module-grid">${modules.map(module => `
+  return todayScreen() + `<section class="today-library" id="sections" tabindex="-1" aria-labelledby="sections-title"><h2 id="sections-title">Все разделы</h2><div class="module-grid">${modules.map(module => `
     <a class="module-card ${module.color}" href="#${module.id}">
       <div class="card-art" aria-hidden="true">${illustration(module.art)}</div>
       <div class="card-copy"><h3>${module.title}</h3><p>${module.description}</p></div>
@@ -40,13 +40,14 @@ function analyticsScreen(days) {
   const daily=elapsed.map(date=>dailyProductivity(date));
   const planned=daily.reduce((sum,day)=>sum+day.planned,0);
   const done=daily.reduce((sum,day)=>sum+day.done,0);
+  const paused=daily.reduce((sum,day)=>sum+day.paused,0);
   const percent=planned?Math.round(done/planned*100):0;
   const active=daily.filter(day=>day.planned);
   const best=active.length?active.reduce((best,day)=>day.percent>best.percent?day:best):null;
-  return `<div class="insight-grid"><article class="insight-card"><span>Выполнено</span><strong>${done}<small> / ${planned}</small></strong><p>Отметок за выбранную неделю</p></article><article class="insight-card"><span>Общий результат</span><strong>${percent}%</strong><p>Выполнено из запланированного</p></article><article class="insight-card"><span>Лучший день</span><strong>${best?best.percent+'%':'—'}</strong><p>${best?fmt(best.date,{weekday:'long',day:'numeric',month:'long'}):'Появится после первой отметки'}</p></article></div>${lineChart(days)}<section class="panel breakdown"><h2>Привычки по отдельности</h2><p class="muted">Считаются только дни, которые уже наступили.</p>${state.habits.length?state.habits.map(habit=>{
+  return `<div class="insight-grid"><article class="insight-card"><span>Выполнено</span><strong>${done}<small> / ${planned}</small></strong><p>Отметок за выбранную неделю</p></article><article class="insight-card"><span>Общий результат</span><strong>${percent}%</strong><p>Выполнено из запланированного</p></article><article class="insight-card"><span>Лучший день</span><strong>${best?best.percent+'%':'—'}</strong><p>${best?fmt(best.date,{weekday:'long',day:'numeric',month:'long'}):'Появится после первой отметки'}</p></article></div>${lineChart(days)}<section class="panel breakdown"><h2>Привычки по отдельности</h2><p class="muted">Считаются только дни, которые уже наступили. ${paused ? `Отметок «Пауза» — ${paused}. Они исключены из расчёта.` : ''}</p>${state.habits.length?state.habits.map(habit=>{
     const target=elapsed.filter(date=>habitScheduled(habit,date));
     const count=target.filter(date=>habit.done.includes(key(date))).length;
-    const share=target.length?Math.round(count/target.length*100):0;
-    return `<div class="breakdown-row"><span>${safe(habit.name)}</span><progress max="100" value="${share}"></progress><b>${share}%</b></div>`;
+    const share=target.length?Math.round(count/target.length*100):null;
+    return `<div class="breakdown-row"><span>${safe(habit.name)}</span><progress max="100" value="${share ?? 0}"></progress><b>${share === null ? '—' : share + '%'}</b></div>`;
   }).join(''):'<p class="muted">Добавь первую привычку в разделе «Привычки».</p>'}</section>`;
 }

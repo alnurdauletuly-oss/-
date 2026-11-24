@@ -60,6 +60,10 @@ function plannerScreen() {
   ${overdue.length ? `<section class="panel daily-plan overdue-panel"><div class="plan-top"><div><h2>Просроченные</h2><p>Срок прошёл, задача ещё открыта</p></div><span>${overdue.length}</span></div><ul class="plan-list">${overdue.map(task => plannerTask(task, [], true)).join('')}</ul></section>` : ''}`;
 }
 
+function tasksWithFeatured(task, featured, tasks = state.tasks) {
+  return tasks.map(item => item.date === task.date ? {...item, featured:item.id === task.id && featured} : item);
+}
+
 function plannerClick(button) {
   const {planMove, planJump, taskFeature, taskEdit, addSubtask} = button.dataset;
   if (planMove || planJump || button.hasAttribute('data-plan-today')) {
@@ -75,9 +79,7 @@ function plannerClick(button) {
   if (taskEdit) openEditor('task', task.date, {task});
   else if (addSubtask) openEditor('task', task.date, {parentId:task.id});
   else {
-    const featured = !task.featured;
-    state.tasks.filter(item => item.date === task.date).forEach(item => { item.featured = false; });
-    task.featured = featured;
+    state.tasks = tasksWithFeatured(task, !task.featured);
     save();
     render();
     $('view').querySelector(`[data-task-feature="${CSS.escape(task.id)}"]`)?.focus({preventScroll:true});

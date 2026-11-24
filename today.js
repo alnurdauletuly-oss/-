@@ -42,6 +42,7 @@ function startTodayQuoteClock() {
   function refresh() {
     clearTimeout(timeout);
     const now = new Date();
+    if (screen === 'home' && key(now) !== key(today) && !document.querySelector('dialog[open]')) render();
     const quote = $('today-quote');
     if (quote) quote.textContent = todayQuote(now);
     const elapsed = (now.getMinutes() % 30) * 60000 + now.getSeconds() * 1000 + now.getMilliseconds();
@@ -55,50 +56,46 @@ function startTodayQuoteClock() {
 function todayScreen() {
   const now = new Date();
   const date = key(now);
-  const habits = state.habits.filter(habit => habitScheduled(habit, now));
-  const done = habits.filter(habit => habit.done.includes(date)).length;
-  const percent = habits.length ? Math.round(done / habits.length * 100) : 0;
-  const events = state.events.filter(event => new Date(`${event.date}T${event.time}`) >= now);
-  events.sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`));
-  const event = events[0];
-  const pending = goalSteps().filter(({ step }) => !step.done);
-  const scheduled = pending.filter(({ step }) => step.date);
-  scheduled.sort((a, b) => a.step.date.localeCompare(b.step.date));
-  const next = scheduled.find(({ step }) => step.date <= date) || pending.find(({ step }) => !step.date) || scheduled[0];
-  const stepDate = next?.step.date;
-  let stepTiming = '';
-  if (stepDate) {
-    const day = short(new Date(`${stepDate}T12:00:00`));
-    stepTiming = stepDate === date ? 'Запланировано на сегодня' :
-      stepDate < date ? `Было запланировано на ${day}` : `Запланировано на ${day}`;
-  }
+  const entry = state.journal[date] || {};
+  const daily = dailyProductivity(now);
+  const habits = state.habits.filter(habit => habitScheduled(habit, now) || habitPaused(habit, date));
+  const task = state.tasks.find(item => item.date === date && item.featured);
+  const event = state.events
+    .filter(item => new Date(`${item.date}T${item.time}`) >= now)
+    .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))[0];
+  const pending = goalSteps().filter(({step}) => !step.done);
+  const dated = pending.filter(({step}) => step.date).sort((a, b) => a.step.date.localeCompare(b.step.date));
+  const next = dated.find(({step}) => step.date <= date) || pending.find(({step}) => !step.date) || dated[0];
   const eventDay = event && (event.date === date ? 'Сегодня' : short(new Date(`${event.date}T12:00:00`)));
-
-  const habitRow = habit => `<label class="today-check">
-    <input class="check" type="checkbox" data-habit="${safe(habit.id)}" data-date="${date}" ${habit.done.includes(date) ? 'checked' : ''}>
-    <span>${safe(habit.name)}</span>
-  </label>`;
+  const habitRow = habit => {
+    const paused = habitPaused(habit, date);
+    const done = habit.done.includes(date);
+    const name = safe(habit.name);
+    return `<div class="today-habit-row">
+      ${paused ? `<span class="today-paused-name">${name}<small>На паузе</small></span>` :
+        `<label class="today-check"><input class="check" type="checkbox" data-habit="${safe(habit.id)}" data-date="${date}" ${done ? 'checked' : ''}><span>${name}</span></label>`}
+      ${done ? '' : `<button type="button" class="today-pause" data-habit-pause="${safe(habit.id)}" aria-label="${paused ? 'Возобновить' : 'Пауза на сегодня'} — ${name}" title="${paused ? 'Возобновить сегодня' : 'Пауза на сегодня'}">${paused ? 'Возобновить' : '<span aria-hidden="true">Ⅱ</span>'}</button>`}
+    </div>`;
+  };
 
   return `<section class="today-stage" id="today-overview" aria-labelledby="today-title">
     <div class="today-hero">
       <p class="today-date"><time datetime="${date}">${fmt(now, {weekday:'long', day:'numeric', month:'long'})}</time></p>
-      <h1 id="today-title">Твой день.<br><em>Твой темп.</em></h1>
+      <h1 id="today-title">Твой день. <em>Твой темп.</em></h1>
       <p class="today-lead"><q id="today-quote">${safe(todayQuote(now))}</q></p>
-      <div class="hero-actions"><button class="primary" data-today-start>${habits.length ? 'Отметить привычки' : 'Добавить привычку'}</button><a href="#journal">Открыть дневник</a></div>
     </div>
     <div class="today-glow" aria-hidden="true"></div>
     <div class="today-grid">
-      <article class="today-card" id="today-habits" tabindex="-1">
-        <div class="today-card-head"><h2>Привычки сегодня</h2><a href="#habits">Неделя</a></div>
-        <div class="today-metric"><strong>${done}<small> / ${habits.length}</small></strong><span>${percent}%</span></div>
-        <progress aria-label="Привычки на сегодня" value="${done}" max="${habits.length || 1}"></progress>
-        ${habits.length ? `<div class="today-checks">${habits.map(habitRow).join('')}</div>` : '<p>На сегодня нет привычек.</p><button class="today-inline" data-advanced-habit>Добавить привычку</button>'}
+      <article class="today-card today-focus">
+        <div class="today-card-head"><h2>Главная задача</h2><a href="#tasks" data-today-planner>Задачи</a></div>
+        ${task ? `<label class="today-check"><input class="check" type="checkbox" data-task="${safe(task.id)}" ${task.done ? 'checked' : ''}><span>${safe(task.name)}</span></label>` :
+          '<p>Отметь задачу звёздочкой, и она появится здесь.</p>'}
       </article>
-      <article class="today-card">
-        <div class="today-card-head"><h2>Следующий шаг</h2><a href="#goals">Цели</a></div>
-        ${next ? `<p class="today-context">${safe(next.goal.title)}</p>
-          <label class="today-check today-step"><input class="check" type="checkbox" data-goal-step="${safe(next.goal.id)}" data-step-id="${safe(next.step.id)}"><span>${safe(next.step.text)}</span></label>
-          ${stepTiming ? `<p>${stepTiming}</p>` : ''}` : '<p>Добавь шаг в «Целях» или назначь его на сегодня.</p>'}
+      <article class="today-card" id="today-habits">
+        <div class="today-card-head"><h2>Привычки сегодня</h2><a href="#habits">Трекер</a></div>
+        <div class="today-metric"><strong>${daily.done}<small> / ${daily.planned}</small></strong>${daily.planned ? `<span>${daily.percent}%</span>` : ''}</div>
+        <progress aria-label="Привычки на сегодня" value="${daily.done}" max="${daily.planned || 1}"></progress>
+        ${habits.length ? `<div class="today-checks">${habits.map(habitRow).join('')}</div>` : '<p>На сегодня нет привычек.</p><button class="today-inline" data-advanced-habit>Добавить привычку</button>'}
       </article>
       <article class="today-card">
         <div class="today-card-head"><h2>Ближайшее событие</h2><a href="#calendar">Календарь</a></div>
@@ -106,17 +103,76 @@ function todayScreen() {
         <button class="today-inline" data-add-event="${date}">＋ Событие</button>
       </article>
     </div>
+    ${next ? `<div class="today-goal"><p><strong>Следующий шаг к цели</strong> <span>${safe(next.goal.title)}</span></p><label class="today-check today-step">${goalStepCheckbox(next.goal, next.step)}<span>${safe(next.step.text)}</span></label><a href="#goals">Цели</a></div>` : ''}
+    <div class="today-actions"><button class="primary" type="button" data-close-day>${entry.closedAt ? 'Итог дня · Изменить' : 'Закрыть день'}</button><a href="#journal">Открыть дневник</a></div>
   </section>`;
 }
 
-function focusTodayHabits() {
-  const card = $('today-habits');
-  const first = card.querySelector('input:not(:checked)') || card.querySelector('input');
-  if (!first) {
-    openEditor('habit');
-    return;
+function startCloseDay() {
+  const dialog = $('close-day');
+  const form = $('close-day-form');
+  const nextTask = $('close-day-task');
+  const taskName = $('close-day-task-name');
+  let day;
+  let tomorrow;
+  let choices = [];
+  function updateTaskField() {
+    const needsName = nextTask.value === 'new';
+    $('close-day-new-task').hidden = !needsName;
+    taskName.required = needsName;
   }
-  const motion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  card.scrollIntoView({behavior: motion ? 'instant' : 'smooth', block:'nearest'});
-  first.focus({preventScroll:true});
+  nextTask.addEventListener('change', updateTaskField);
+  taskName.addEventListener('input', () => taskName.setCustomValidity(''));
+
+  $('view').addEventListener('click', event => {
+    if (!event.target.closest('[data-close-day]')) return;
+    const now = new Date();
+    day = key(now);
+    tomorrow = key(shift(now, 1));
+    const entry = state.journal[day] || {};
+    const {done, planned} = dailyProductivity(now);
+    const tasks = state.tasks.filter(task => task.date === day);
+    choices = state.tasks.filter(task => task.date === tomorrow);
+    const featured = choices.find(task => task.featured);
+    form.reset();
+    taskName.setCustomValidity('');
+    $('close-day-summary').textContent = `Привычки: ${done} из ${planned} · Задачи: ${tasks.filter(task => task.done).length} из ${tasks.length}`;
+    $('close-day-win').value = entry.win || '';
+    $('close-day-error').textContent = '';
+    nextTask.replaceChildren(new Option('Выбрать позже', ''));
+    for (const [index, task] of choices.entries()) nextTask.add(new Option(task.name, String(index)));
+    nextTask.add(new Option('Записать новый шаг', 'new'));
+    nextTask.value = featured ? String(choices.indexOf(featured)) : '';
+    updateTaskField();
+    dialog.showModal();
+  });
+
+  $('close-day-cancel').addEventListener('click', () => dialog.close());
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const selection = nextTask.value;
+    const name = taskName.value.trim();
+    if (selection === 'new' && !name) {
+      taskName.setCustomValidity('Введите следующий шаг');
+      taskName.reportValidity();
+      return;
+    }
+    const task = selection === 'new'
+      ? {id:crypto.randomUUID(), name, date:tomorrow, done:false}
+      : choices[selection];
+    const entry = {...state.journal[day], win:$('close-day-win').value.trim(), closedAt:new Date().toISOString()};
+    const updated = {...state, journal:{...state.journal, [day]:entry}};
+    if (selection && task) {
+      updated.tasks = tasksWithFeatured(task, true, selection === 'new' ? [...state.tasks, task] : state.tasks);
+    }
+    if (!save(updated)) {
+      $('close-day-error').textContent = 'Итог не сохранился. Попробуй ещё раз.';
+      return;
+    }
+    state = updated;
+    journalDate = new Date(`${day}T12:00:00`);
+    dialog.close();
+    render();
+    $('view').querySelector('[data-close-day]')?.focus({preventScroll:true});
+  });
 }

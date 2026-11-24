@@ -89,7 +89,7 @@ function goalsChange(target) {
   render();
   const attribute = goalSchedule ? 'data-goal-schedule' : 'data-goal-step';
   const replacement = $('view').querySelector(`[${attribute}][data-step-id="${CSS.escape(stepId)}"]`);
-  const next = replacement || $('view').querySelector('.today-step input, .today-card a[href="#goals"]');
+  const next = replacement || $('view').querySelector('.today-step input, .site-links a[href="#goals"]');
   next?.focus({preventScroll:true});
   return true;
 }
