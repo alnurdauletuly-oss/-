@@ -155,7 +155,7 @@ function noteToolsClick(button) {
   return false;
 }
 
-const entranceVersion = 'arrival-total-2s';
+const entranceVersion = 'arrival-from-open';
 const entranceRampMs = 500;
 const entranceTotalMs = 2000;
 const entranceBrakeMs = 1000;
@@ -189,7 +189,7 @@ function homeEntranceFrame(time) {
 function startHomeEntrance(spaceReady) {
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   let entered = false;
-  function updateRoute() {
+  function updateRoute(startedAt) {
     const hero = document.querySelector('.today-hero');
     if (!hero) {
       finishHomeEntrance();
@@ -201,14 +201,16 @@ function startHomeEntrance(spaceReady) {
       if (sessionStorage.getItem('jospat-home-entered') === entranceVersion) return;
       sessionStorage.setItem('jospat-home-entered', entranceVersion);
     } catch {}
+    if (performance.now() - startedAt >= entranceTotalMs) return;
     if (!spaceReady || motion.matches) {
       hero.classList.add('home-quiet-entry');
       return;
     }
-    homeEntranceAt = performance.now();
+    homeEntranceAt = startedAt;
     document.body.classList.add('home-warp');
   }
   motion.addEventListener('change', finishHomeEntrance);
-  window.addEventListener('hashchange', updateRoute);
-  updateRoute();
+  window.addEventListener('hashchange', () => updateRoute(performance.now()));
+  // The initial visit includes loading time in the entrance budget.
+  updateRoute(0);
 }
