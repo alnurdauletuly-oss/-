@@ -210,7 +210,9 @@ form input:not([type=checkbox]), select, .journal-datebar input, .sleep-input in
   aspect-ratio: 1;
   translate: -50% -50%;
   pointer-events: auto;
-  touch-action: pan-y;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
   cursor: grab;
   padding: 0;
   border: 1px solid transparent;
@@ -232,3 +234,5 @@ form input:not([type=checkbox]), select, .journal-datebar input, .sleep-input in
   .today-hero h1 em { white-space: nowrap; }
 
 }
+
+.planet-view.is-held { position: fixed; z-index: 3; pointer-events: none; }
