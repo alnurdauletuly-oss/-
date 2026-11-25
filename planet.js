@@ -155,7 +155,7 @@ function createPlanet() {
   document.body.append(layer);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const names = ['Сатурн', 'Ледяная планета', 'Медная планета', 'Сиреневая планета'];
-  let anchor = null, elapsed = 0, nextArrival = 1, cursor = 0;
+  let anchor = null, elapsed = 0, nextArrival = 0.2, cursor = 0;
   const worlds = names.map((name, type) => {
     const view = document.createElement('div');
     view.className = 'planet-view';
@@ -214,10 +214,14 @@ function createPlanet() {
   function spawn(world) {
     world.active = true;
     world.age = 0;
-    world.depth = 0;
+    world.depth = 7;
     const left = world.type % 2 === 1;
-    world.x = left ? 0.17 : 0.81;
-    world.y = (innerWidth < 700 ? [0.20, 0.28, 0.24, 0.18] : [0.36, 0.72, 0.62, 0.29])[world.type];
+    world.routeX = (left ? -1 : 1) * [0.82, 1.04, 1.12, 0.92][world.type];
+    world.routeY = [-0.72, -0.48, -0.35, -0.90][world.type];
+    world.driftY = 0;
+    world.x = 0.5 + world.routeX / world.depth;
+    world.y = 0.44 + world.routeY / world.depth;
+    if (reduced.matches) { world.x = 0.81; world.y = 0.22; }
     world.view.hidden = false;
     world.control.hidden = false;
   }
@@ -225,12 +229,12 @@ function createPlanet() {
   function paint(world) {
     const mobile = innerWidth < 700;
     const base = Math.min(innerWidth * (mobile ? 0.58 : 0.31), 490);
-    const scale = 0.63 + world.depth * 0.31;
+    const scale = reduced.matches ? 0.75 : 1.7 / world.depth;
     const width = Math.round(base);
     world.view.style.width = `${width}px`;
     world.view.style.transform = `translate3d(${world.x * innerWidth - width / 2}px, ${world.y * innerHeight - width / 2 / 2.102}px, 0) scale(${scale})`;
-    const fadeIn = Math.min(1, world.age / 2.5);
-    const fadeOut = Math.min(1, Math.max(0, (27 - world.age) / 3));
+    const fadeIn = Math.min(1, world.age / 0.8);
+    const fadeOut = Math.min(1, Math.max(0, (world.depth - 0.55) / 0.5));
     world.control.style.width = `${Math.max(44, width * scale * 0.37)}px`;
     world.control.style.left = `${world.x * innerWidth}px`;
     world.control.style.top = `${world.y * innerHeight}px`;
@@ -256,24 +260,29 @@ function createPlanet() {
     const {dt, boost, bank} = event.detail;
     elapsed += dt;
     if (elapsed >= nextArrival && worlds.length) {
-      const world = worlds[cursor % worlds.length];
-      if (!world.active) { spawn(world); cursor++; }
-      nextArrival = elapsed + 24 + Math.random() * 10;
+      const next = Array.from({length:worlds.length}, (_, i) => (cursor + i) % worlds.length)
+        .find(index => !worlds[index].active);
+      if (next !== undefined) {
+        spawn(worlds[next]);
+        cursor = (next + 1) % worlds.length;
+        nextArrival = elapsed + 5 + Math.random() * 3;
+      } else nextArrival = elapsed + 0.5;
     }
     for (const world of worlds) {
       if (!world.active) continue;
       if (!world.gesture && !world.control.matches(':focus-visible')) {
         world.age += dt;
-        // Same vanishing point, radial expansion and signed vertical bank as stars.
-        const expansion = 0.011 + boost * (0.30 + (0.45 + world.depth * 0.1) * 1.18);
-        world.x += (world.x - 0.5) * expansion * dt;
-        world.y += ((world.y - 0.44) * expansion - 0.006 - bank * 0.12) * dt;
-        world.depth = Math.min(2.8, world.depth + dt * (0.024 + boost * 0.75));
+        // Perspective projection: distance drives both size and the outward
+        // path. The shared starfield boost moves the camera forward faster.
+        world.depth = Math.max(0.55, world.depth - dt * (0.31 + boost * 3.2));
+        world.driftY -= bank * dt * 0.16;
+        world.x = 0.5 + world.routeX / world.depth;
+        world.y = 0.44 + (world.routeY + world.driftY) / world.depth;
       }
       world.bank += (bank * 0.35 - world.bank) * (1 - Math.exp(-dt * 5));
       if (!world.gesture) world.rotation += dt * (0.22 + world.spin);
       world.spin *= Math.exp(-dt * 2.8);
-      if (world.age > 27 || world.x < -0.4 || world.x > 1.4 || world.y < -0.5 || world.y > 1.5) {
+      if (world.depth <= 0.56 || world.x < -0.4 || world.x > 1.4 || world.y < -0.5 || world.y > 1.5) {
         world.active = false;
         world.view.hidden = true;
         world.control.hidden = true;
@@ -285,7 +294,7 @@ function createPlanet() {
   window.addEventListener('resize', () => { if (anchor) worlds.filter(w => w.active).forEach(paint); });
   reduced.addEventListener('change', () => {
     worlds.forEach(world => { world.active = false; world.view.hidden = true; world.control.hidden = true; });
-    elapsed = 0; nextArrival = 1;
+    elapsed = 0; nextArrival = 0.2;
     if (anchor && reduced.matches && worlds[0]) { spawn(worlds[0]); paint(worlds[0]); }
   });
   return nextAnchor => {
