@@ -382,3 +382,96 @@
   .calendar > button { min-height: 42px; }
   .mind-tools button { font-size: .625rem; }
 }
+
+/* Quick edits share the same controls across goals, tasks and notes. */
+.workspace-feedback { position: fixed; z-index: 11; left: 50%; bottom: calc(72px + env(safe-area-inset-bottom)); transform: translate(-50%, 8px); padding: 9px 15px; border: 1px solid var(--line); border-radius: 24px; background: var(--side); color: var(--lime); opacity: 0; pointer-events: none; white-space: nowrap; transition: opacity .16s, transform .16s; }
+.workspace-feedback.visible { transform: translate(-50%, 0); opacity: 1; }
+.reorder-handle, .orbit-table .habit-name .reorder-handle { display: inline-grid; place-items: center; width: 28px; min-height: 33px; padding: 0; color: var(--muted); background: transparent; border: 0; cursor: grab; touch-action: none; user-select: none; }
+.orbit-table .habit-name .reorder-handle { vertical-align: middle; }
+.orbit-table .habit-name [data-habit-edit] { display: inline-flex; width: calc(100% - 30px); vertical-align: middle; }
+.reorder-handle:active { cursor: grabbing; }
+.drop-before > *, .mobile-habit.drop-before { box-shadow: inset 0 2px var(--lime); }
+.drop-after > *, .mobile-habit.drop-after { box-shadow: inset 0 -2px var(--lime); }
+.drop-on { outline: 2px solid var(--lime); outline-offset: -2px; }
+.row-actions { position: relative; }
+.row-menu { display: grid; position: fixed; z-index: 12; left: var(--menu-x, 50%); top: var(--menu-y, 50%); width: min(250px, calc(100vw - 24px)); max-height: min(240px, 45vh); overflow: auto; background: var(--side); padding: 5px; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px #0009; }
+.row-menu button { text-align: left; padding: 8px 10px; overflow-wrap: anywhere; }
+.fire-icon, .victory-fire { display: inline-block; transform-origin: 50% 85%; }
+.fire-new .fire-icon { animation: habit-ignite .65s ease-out both; }
+.victory-fire { font-size: 2.7rem; filter: drop-shadow(0 0 10px #ff7b38a8); animation: victory-glow 1.65s ease-in-out infinite alternate; }
+@keyframes habit-ignite { 0% { opacity: .4; transform: scale(.65); } 45% { transform: scale(1.45) rotate(-9deg); filter: drop-shadow(0 0 10px #ffad38); } 100% { transform: scale(1); } }
+@keyframes victory-glow { from { transform: rotate(-4deg) scale(.96); } to { transform: rotate(3deg) scale(1.08); filter: drop-shadow(0 0 17px #ff7b38b8); } }
+.level-card, .victory-panel { background: radial-gradient(ellipse at top left, #202825, transparent 70%), var(--panel); }
+.level-card strong, .victory-count strong { color: var(--text); font-family: inherit; font-weight: 750; font-variant-numeric: tabular-nums; }
+.level-card progress { height: 8px; accent-color: var(--lime); }
+.goal-target-line { stroke: var(--muted); opacity: .75; stroke-dasharray: 4 5; }
+
+.plan-task-row .task-text { text-align: left; flex: 1 1 9rem; overflow-wrap: anywhere; }
+.task-text small { display: block; color: var(--muted); }
+.task-done .task-name { color: var(--muted); text-decoration: line-through; }
+.quick-task { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 0; }
+.quick-task input, .quick-task input:not([type=checkbox]) { width: auto; min-width: 0; flex: 1 1 8rem; }
+.quick-task button { min-height: 40px; }
+.quick-task .primary { width: auto; margin: 0; }
+.task-inline-edit { flex: 1 1 12rem; }
+.note-tools { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line); }
+.note-tools button, .note-check-row button { background: transparent; }
+.note-checklist { display: grid; gap: 5px; }
+.note-checklist:empty { display: none; }
+.note-check-row { display: flex; align-items: center; gap: 8px; }
+.note-check-row input:not([type=checkbox]) { min-width: 0; flex: 1; padding: 8px; }
+.note-check-row:has(:checked) input:not([type=checkbox]) { color: var(--muted); text-decoration: line-through; }
+
+.goal-create { display: block; margin-bottom: 18px; }
+.goal-create summary { cursor: pointer; color: var(--lime); font-weight: 650; }
+.goal-fields { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0,1fr)); margin-top: 12px; align-items: end; }
+.goal-fields label, .measure-form label { min-width: 0; margin: 0; }
+.goal-fields input, .goal-fields select, .measure-form input { display: block; margin-top: 4px; width: 100%; }
+.goal-fields button { min-height: 42px; }
+.goal-fields .primary { margin: 0; }
+.goal-number-fields { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.goal-pairs { display: grid; gap: 14px; }
+.goal-pair { display: grid; grid-template-columns: minmax(0,1.55fr) minmax(0,1fr); align-items: start; gap: 14px; }
+.goal-pair > * { min-width: 0; }
+.goal-card-head h2 { margin-right: auto; overflow-wrap: anywhere; }
+.goal-trajectory { display: grid; gap: 6px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; overflow-wrap: anywhere; }
+.goal-trajectory strong, .goal-analysis-result { color: var(--lime); font-weight: 700; }
+.goal-trajectory a, .goal-analysis a { color: var(--lime); width: fit-content; }
+.goal-trajectory button { justify-self: start; }
+.goal-history { padding: 0; margin: 0; list-style: none; }
+.goal-history li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); }
+.goal-history time { margin-right: auto; color: var(--muted); }
+.goal-history li > span, .goal-history li > strong { overflow-wrap: anywhere; }
+.measure-form { flex-wrap: wrap; align-items: end; width: 100%; }
+.measure-form label { flex: 1 1 7rem; }
+.goal-step > label:first-child { flex: 1 1 8rem; }
+.goal-step { flex-wrap: wrap; }
+.goal-analysis { padding: clamp(12px, 3vw, 25px); display: grid; gap: 12px; }
+.goal-analysis-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.goal-analysis-toolbar label { flex: 1 1 12rem; min-width: 0; }
+.goal-analysis-toolbar select { width: 100%; display: block; }
+.analytics-tabs { margin-block: 10px 18px; display: flex; flex-wrap: wrap; }
+.analytics-tabs a { padding: 7px 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; }
+.analytics-tabs a[aria-current] { background: var(--accent-wash); color: var(--lime); }
+.goal-measure-chart { display: block; width: 100%; min-width: 420px; }
+.home-entering h1, .home-entering .today-lead { animation: home-emerge .88s ease-out both; }
+@keyframes home-emerge { from { opacity: .36; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 700px) {
+  .goal-pair, .goal-fields { grid-template-columns: minmax(0,1fr); }
+  .quick-task input { min-height: 44px; }
+  .note-tools button, .note-check-row button { min-height: 44px; }
+  .mobile-habit .reorder-handle { width: 44px; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fire-new .fire-icon, .victory-fire { animation: none; }
+  .home-entering h1, .home-entering .today-lead { animation: home-fade .25s ease-out both; }
+  @keyframes home-fade { from { opacity: .7; } to { opacity: 1; } }
+}
+.goal-history-panel { display: grid; align-items: start; justify-content: stretch; gap: 10px; }
+.goal-step-title { margin-top: 14px; }
+.goal-add-step > label:has([name="milestone"]) { display: flex; align-items: center; white-space: nowrap; gap: 4px; }
+.goal-add-step > label [name="milestone"] { width: auto; }
+.goal-card button[data-goal-cancel], .goal-add-step button:not([aria-label]) { font-size: .875rem; }
+.calendar-detail > .quick-task { padding: 10px 18px; }
+.note-editor:has(.note-tools) #note-body { min-height: 180px; }
+.note-tools { margin-top: 10px; padding-bottom: 5px; background: var(--panel); }

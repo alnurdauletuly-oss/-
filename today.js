@@ -65,7 +65,9 @@ function todayScreen() {
     .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))[0];
   const pending = goalSteps().filter(({step}) => !step.done);
   const dated = pending.filter(({step}) => step.date).sort((a, b) => a.step.date.localeCompare(b.step.date));
-  const next = dated.find(({step}) => step.date <= date) || pending.find(({step}) => !step.date) || dated[0];
+  const scheduledSteps = goalSteps().filter(({step}) => step.date === date);
+  const next = dated.find(({step}) => step.date < date) || pending.find(({step}) => !step.date);
+  const shownSteps = scheduledSteps.length ? scheduledSteps : next ? [next] : [];
   const eventDay = event && (event.date === date ? 'Сегодня' : short(new Date(`${event.date}T12:00:00`)));
   const habitRow = habit => {
     const paused = habitPaused(habit, date);
@@ -104,7 +106,7 @@ function todayScreen() {
         <button class="today-inline" data-add-event="${date}">＋ Событие</button>
       </article>
     </div>
-    ${next ? `<div class="today-goal"><p><strong>Следующий шаг к цели</strong> <span>${safe(next.goal.title)}</span></p><label class="today-check today-step">${goalStepCheckbox(next.goal, next.step)}<span>${safe(next.step.text)}</span></label><a href="#goals">Цели</a></div>` : ''}
+    ${shownSteps.map(({goal, step}) => `<div class="today-goal"><p><strong>${step.date === date ? 'Шаг на сегодня' : 'Следующий шаг к цели'}</strong> <span>${safe(goal.title)}</span></p><label class="today-check today-step">${goalStepCheckbox(goal, step)}<span>${safe(step.text)}</span></label><a href="#goals">Цели</a></div>`).join('')}
     <div class="today-actions"><button class="primary" type="button" data-close-day>${entry.closedAt ? 'Итог дня · Изменить' : 'Закрыть день'}</button><a href="#journal">Открыть дневник</a></div>
   </section>`;
 }

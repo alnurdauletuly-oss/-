@@ -1,5 +1,4 @@
 const habitColors = ['#bbf029','#4edac8','#a59bff','#ff9b77','#f581b4','#79bfff'];
-let habitOrder = 'added';
 let habitRange = 'week';
 let lastHabitMark = null;
 
@@ -23,29 +22,47 @@ function habitScheduled(habit, date) {
   return !habitPaused(habit, day) && (habit.done.includes(day) || ((!habit.created || day >= habit.created) && habit.days.includes(weekday(date))));
 }
 
-function habitStreak(habit, elapsed) {
+function habitStreak(habit, dates) {
   const completed = new Set(habit.done);
-  let count = 0;
-  for (const date of elapsed.slice().reverse()) {
-    const day = key(date);
-    if (!completed.has(day)) {
-      if (day === key(today)) continue;
-      break;
-    }
-    count++;
+  let longest = 0, run = 0;
+  for (const date of dates) {
+    run = date <= today && completed.has(key(date)) ? run + 1 : 0;
+    longest = Math.max(longest, run);
   }
-  return count;
+  return longest;
+}
+
+function habitFire(habit, count) {
+  return `<span class="habit-streak ${count ? 'is-lit' : ''} ${count && lastHabitMark?.id === habit.id ? 'fire-new' : ''}" aria-label="Лучшая цепочка: ${count}"><span class="fire-icon" aria-hidden="true">🔥</span> ${count}</span>`;
+}
+
+function habitHandle(habit) {
+  return `<button type="button" class="reorder-handle" data-habit-drag="${safe(habit.id)}" aria-label="Порядок привычки: ${safe(habit.name)}" title="Перетащить или нажать для перемещения">⠿</button>`;
+}
+
+function moveHabit(id, destination, after) {
+  const from = state.habits.findIndex(habit => habit.id === id);
+  if (from < 0 || id === destination) return;
+  const reordered = state.habits.map((habit, index) => ({...habit, color:habitColor(habit, index)}));
+  const [habit] = reordered.splice(from, 1);
+  const to = reordered.findIndex(item => item.id === destination);
+  if (to < 0) return;
+  reordered.splice(to + Number(after), 0, habit);
+  if (!save({...state, habits:reordered})) return;
+  state.habits = reordered;
+  render();
+  [...$('view').querySelectorAll('[data-habit-drag]')].find(button => button.dataset.habitDrag === id && button.getClientRects().length)?.focus({preventScroll:true});
 }
 
 function habitSummary(habit, days) {
   const elapsed = days.filter(date => date <= today && habitScheduled(habit, date));
   const done = elapsed.filter(date => habit.done.includes(key(date))).length;
   const percent = elapsed.length ? Math.round(done / elapsed.length * 100) : null;
-  return {done, count:elapsed.length, percent, streak:habitStreak(habit, elapsed)};
+  return {done, count:elapsed.length, percent, streak:habitStreak(habit, days)};
 }
 
 function habitRow({habit, color, percent, streak}, dates) {
-  const completed = dates.map(date => habit.done.includes(key(date)));
+  const completed = dates.map(date => date <= today && habit.done.includes(key(date)));
   const cells = dates.map((date, index) => {
     const day = key(date);
     const checked = completed[index];
@@ -54,13 +71,13 @@ function habitRow({habit, color, percent, streak}, dates) {
     const classes = [checked && completed[index - 1] && 'join-left', checked && completed[index + 1] && 'join-right'];
     if (lastHabitMark?.id === habit.id && lastHabitMark.date === day) classes.push('just-marked');
     return `<td class="habit-day ${classes.filter(Boolean).join(' ')}"><label class="habit-orbit">
-      <input type="checkbox" data-habit="${safe(habit.id)}" data-date="${day}" aria-label="${safe(habit.name)}, ${short(date)}" ${checked ? 'checked' : ''}>
+      <input type="checkbox" data-habit="${safe(habit.id)}" data-date="${day}" aria-label="${safe(habit.name)}, ${short(date)}" ${checked ? 'checked' : ''} ${day > key(today) ? 'disabled' : ''}>
       <span aria-hidden="true"></span>
     </label></td>`;
   }).join('');
-  return `<tr style="--habit-color:${color}">
-    <th scope="row" class="habit-name"><button type="button" data-habit-edit="${safe(habit.id)}" aria-label="Изменить привычку: ${safe(habit.name)}"><i aria-hidden="true"></i><span>${safe(habit.name)}${habit.description ? `<small>${safe(habit.description)}</small>` : ''}</span></button></th>
-    ${cells}<td class="habit-score"><span class="habit-streak ${streak ? 'is-lit' : ''}" aria-label="Серия: ${streak}"><span aria-hidden="true">🔥</span> ${streak}</span><strong>${percent === null ? '—' : percent+'%'}</strong></td>
+  return `<tr data-habit-row="${safe(habit.id)}" style="--habit-color:${color}">
+    <th scope="row" class="habit-name">${habitHandle(habit)}<button type="button" data-habit-edit="${safe(habit.id)}" aria-label="Изменить привычку: ${safe(habit.name)}"><i aria-hidden="true"></i><span>${safe(habit.name)}${habit.description ? `<small>${safe(habit.description)}</small>` : ''}</span></button></th>
+    ${cells}<td class="habit-score">${habitFire(habit, streak)}<strong>${percent === null ? '—' : percent+'%'}</strong></td>
   </tr>`;
 }
 
@@ -71,17 +88,20 @@ function victorySeries(dates) {
     const day = key(date);
     return {date, day, planned, paused:!planned && paused > 0, won: day <= todayKey && planned > 0 && percent >= 70};
   });
-  let count = 0;
-  for (const {day, planned, won} of days.slice().reverse()) {
-    if (day > todayKey || !planned || (day === todayKey && !won)) continue;
-    if (!won) break;
-    count++;
+  const first = state.habits.flatMap(habit => [...habit.done, ...(habit.created ? [habit.created] : [])]).sort()[0];
+  let count = 0, best = 0;
+  if (first) {
+    const distance = dayDistance(first, todayKey);
+    for (let offset = -distance; offset <= 0; offset++) {
+      const {planned, percent} = dailyProductivity(shift(today, offset));
+      if (!planned || (offset === 0 && percent < 70)) continue;
+      count = percent >= 70 ? count + 1 : 0;
+      best = Math.max(best, count);
+    }
   }
-  const word = count % 10 === 1 && count % 100 !== 11 ? 'день' :
-    count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14) ? 'дня' : 'дней';
   const monthly = dates.length > 7;
   return `<section class="victory-panel ${monthly ? 'victory-month' : ''}">
-    <div><span class="victory-eyebrow">СЕРИЯ ПОБЕД</span><div class="victory-count"><strong>${count}</strong><span>${word} подряд</span></div>
+    <div><span class="victory-eyebrow">СЕРИЯ ПОБЕД</span><div class="victory-count"><span class="victory-fire" aria-hidden="true">🔥</span><strong>${count}</strong></div><p>Рекорд · ${best} дн.</p>
     <p>Победа — от 70% привычек за день. Свободные дни сохраняют серию.</p></div>
     <div class="victory-days" role="group" aria-label="Победы за выбранный период">${days.map(({date, day, won, paused}) =>
       `<div class="${won ? 'won' : ''} ${day === todayKey ? 'current' : ''}" role="group" aria-label="${short(date)}, ${won ? 'победа' : paused ? 'пауза' : 'без победы'}"><span>${monthly ? date.getDate() : weekdays[weekday(date)]}</span><b aria-hidden="true">${won ? '🔥' : paused ? 'Ⅱ' : '·'}</b></div>`
@@ -108,11 +128,11 @@ function mobileHabits(dates, rows) {
     const name = safe(habit.name);
     const id = safe(habit.id);
     const title = `<span class="mobile-habit-title"><strong>${name}</strong>${habit.description ? `<small>${safe(habit.description)}</small>` : ''}${paused ? '<small class="habit-paused">На паузе</small>' : ''}</span>`;
-    return `<li class="mobile-habit" style="--habit-color:${color}">
+    return `<li class="mobile-habit" data-habit-row="${id}" style="--habit-color:${color}">
       ${paused ? `<div class="mobile-habit-mark"><span aria-hidden="true" class="habit-paused">Ⅱ</span>${title}</div>` :
-        `<label class="mobile-habit-mark"><input class="check" type="checkbox" data-habit="${id}" data-date="${selected}" ${checked ? 'checked' : ''}>${title}</label>`}
+        `<label class="mobile-habit-mark"><input class="check" type="checkbox" data-habit="${id}" data-date="${selected}" ${checked ? 'checked' : ''} ${selected > current ? 'disabled' : ''}>${title}</label>`}
       <div class="mobile-habit-actions">
-        ${streak ? `<span class="habit-streak is-lit" aria-label="Серия: ${streak}"><span aria-hidden="true">🔥</span> ${streak}</span>` : ''}
+        ${habitFire(habit, streak)}${habitHandle(habit)}
         ${selected === current && !checked ? `<button type="button" data-habit-pause="${id}" aria-label="${paused ? 'Возобновить' : 'Пауза на сегодня'} — ${name}">${paused ? 'Возобновить' : 'Пауза'}</button>` : ''}
         <button type="button" data-habit-edit="${id}" aria-label="Изменить привычку: ${name}">⋯</button>
       </div>
@@ -128,9 +148,6 @@ function mobileHabits(dates, rows) {
 function habitsScreen() {
   const dates = habitDates();
   const rows = state.habits.map((habit,index) => ({habit, color:habitColor(habit,index), ...habitSummary(habit,dates)}));
-  if (habitOrder === 'name') rows.sort((a,b) => a.habit.name.localeCompare(b.habit.name, 'ru'));
-  if (habitOrder === 'progress') rows.sort((a,b) => (b.percent ?? -1) - (a.percent ?? -1));
-  if (habitOrder === 'streak') rows.sort((a,b) => b.streak - a.streak);
   const measured = rows.filter(row => row.percent !== null).sort((a,b) => b.percent - a.percent);
   const average = measured.length ? Math.round(measured.reduce((sum,row) => sum + row.done / row.count,0) / measured.length * 100) : null;
   const marks = state.habits.reduce((sum,habit) => sum + habit.done.filter(day => day <= key(today)).length, 0);
@@ -138,7 +155,7 @@ function habitsScreen() {
   const metric = (label, row) => `<article class="panel orbit-stat"><span>${label}</span><strong>${row ? row.percent+'%' : '—'}</strong>${row ? `<p style="--habit-color:${row.color}">${safe(row.habit.name)}</p>` : ''}</article>`;
   return `<section class="panel orbit-panel">
     <div class="orbit-tools"><div class="orbit-range" aria-label="Период">${[['week','Неделя'],['month','Месяц']].map(([range,label]) => `<button type="button" data-habit-range="${range}" aria-pressed="${habitRange === range}">${label}</button>`).join('')}</div>
-    <label>Порядок <select id="habit-order" aria-label="Сортировка привычек">${[['added','По добавлению'],['name','По названию'],['progress','По выполнению'],['streak','По серии']].map(([value,label]) => `<option value="${value}" ${habitOrder === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label></div>
+    </div>
     ${rows.length ? mobileHabits(dates, rows) : ''}
     ${rows.length ? `<div class="orbit-scroll" id="orbit-scroll"><table class="orbit-table" aria-label="Отметки привычек по дням">
       <thead><tr><th scope="col" class="habit-name">Привычка</th>${dates.map(date => `<th scope="col" class="habit-day ${key(date)===key(today) ? 'is-today' : ''}">${date.getDate()}<small>${weekdays[weekday(date)]}</small></th>`).join('')}<th scope="col" class="habit-score">Серия и итог</th></tr></thead>
@@ -151,11 +168,19 @@ function habitsScreen() {
     ${metric('Лучше всего получается', measured[0])}
     ${metric('Требует внимания', measured.length > 1 ? measured.at(-1) : null)}
     <article class="panel orbit-stat"><span>Среднее по привычкам</span><strong>${average === null ? '—' : average+'%'}</strong><p>${measured.length} в расчёте</p></article>
-    <article class="panel orbit-stat"><span>Общий уровень</span><strong>${level}</strong><progress aria-label="Отметки до следующего уровня" value="${marks % 10}" max="10"></progress><p>${10 - marks % 10} до следующего</p></article>
+    <article class="panel orbit-stat level-card"><span>Общий уровень</span><strong>${String(level).padStart(2, "0")}</strong><p>${marks} отметок · ${10 - marks % 10} до следующего</p><progress aria-label="Отметки до следующего уровня" value="${marks % 10}" max="10"></progress></article>
   </div>${victorySeries(dates)}${lineChart(dates)}`;
 }
 
 function habitsClick(button) {
+  if (button.dataset.habitDrag) {
+    const position = state.habits.findIndex(habit => habit.id === button.dataset.habitDrag);
+    showActionMenu(button, [
+      ...(position > 0 ? [['Выше', () => moveHabit(button.dataset.habitDrag, state.habits[position - 1].id, false)]] : []),
+      ...(position < state.habits.length - 1 ? [['Ниже', () => moveHabit(button.dataset.habitDrag, state.habits[position + 1].id, true)]] : [])
+    ]);
+    return true;
+  }
   const {habitRange:range, habitEdit:id} = button.dataset;
   if (range) {
     habitRange = range;

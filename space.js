@@ -13,13 +13,15 @@ function startStarfield() {
     [-0.06, 0.65, 1.06, 0.47], [0.78, -0.08, 0.24, 1.08]
   ];
   let width = 0, height = 0, frame = 0, lastFrame = 0, elapsed = 0;
+  let entranceAt = null;
+  window.addEventListener('jospat-home-entrance', () => { entranceAt = elapsed; });
   let lastScroll = window.scrollY, boost = 0, bank = 0;
   let comet = null, previousRoute = -1, nextComet = 3;
 
-  function drawStar(star, dt, still) {
+  function drawStar(star, dt, still, speed) {
     const x = star.x * width, y = star.y * height;
     const dx = x - width * 0.5, dy = y - height * 0.44;
-    const expansion = boost * (0.30 + star.depth * 1.18);
+    const expansion = speed * (0.30 + star.depth * 1.18);
     const vx = dx * expansion;
     const drift = (2 + star.depth * 3) * 1.20;
     const vy = dy * expansion - drift - bank * (16 + star.depth * 46);
@@ -28,20 +30,20 @@ function startStarfield() {
     const opacity = 0.20 + star.depth * 0.40 + twinkle;
     const travel = Math.hypot(vx, vy);
 
-    if (boost > 0.025 && travel > 20) {
-      const trailTime = Math.min(0.17, (22 + boost * 70) / travel) * Math.sqrt(boost);
+    if (speed > 0.025 && travel > 20) {
+      const trailTime = Math.min(0.17, (22 + speed * 70) / travel) * Math.sqrt(speed);
       const tailX = x - vx * trailTime, tailY = y - vy * trailTime;
       const trail = context.createLinearGradient(tailX, tailY, x, y);
       trail.addColorStop(0, 'rgba(157,194,248,0)');
-      trail.addColorStop(1, `rgba(229,241,255,${Math.min(0.78, opacity + boost * 0.18)})`);
+      trail.addColorStop(1, `rgba(229,241,255,${Math.min(0.78, opacity + speed * 0.18)})`);
       context.beginPath();
       context.moveTo(tailX, tailY);
       context.lineTo(x, y);
       context.strokeStyle = trail;
-      context.lineWidth = radius * (1 + boost * 0.32);
+      context.lineWidth = radius * (1 + speed * 0.32);
       context.stroke();
     }
-    context.fillStyle = `rgba(245,250,255,${Math.min(0.9, opacity + boost * 0.12)})`;
+    context.fillStyle = `rgba(245,250,255,${Math.min(0.9, opacity + speed * 0.12)})`;
     context.beginPath();
     context.arc(x, y, radius, 0, Math.PI * 2);
     context.fill();
@@ -106,8 +108,10 @@ function startStarfield() {
     if (!width || !height) return;
     const still = reduced.matches;
     context.clearRect(0, 0, width, height);
+    const warp = still || entranceAt === null ? 0 : Math.max(0, 1 - (elapsed - entranceAt) / 0.95) ** 2 * 0.85;
+    const speed = Math.max(boost, warp);
     const count = width < 700 ? 85 : stars.length;
-    for (let index = 0; index < count; index++) drawStar(stars[index], dt, still);
+    for (let index = 0; index < count; index++) drawStar(stars[index], dt, still, speed);
     if (!still) drawComet();
   }
 

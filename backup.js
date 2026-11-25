@@ -41,10 +41,15 @@ function parseBackup(text) {
     !records(data.tasks, task => string(task.name) && date(task.date) && typeof task.done === 'boolean' &&
       optionalText(task.parentId) && optionalText(task.project) && optional(task.time, value => value === '' || time(value))) ||
     !records(data.events, event => string(event.name) && date(event.date) && time(event.time)) ||
-    !records(data.notes, note => string(note.title) && string(note.body) && string(note.updated)) ||
+    !records(data.notes, note => string(note.title) && string(note.body) && string(note.updated) && optional(note.checklist, items => records(items, item => string(item.text) && typeof item.done === 'boolean'))) ||
     !records(data.maps, map => string(map.name) && validTree(map.root)) ||
-    !records(data.goals, goal => string(goal.title) && optionalText(goal.why) && optionalDate(goal.date) &&
-      records(goal.steps, step => string(step.text) && typeof step.done === 'boolean' && optionalDate(step.date))) ||
+    !records(data.goals, goal => string(goal.title) && optionalText(goal.why) && optionalDate(goal.date) && optionalDate(goal.completedAt) &&
+      optionalText(goal.criterion) && optionalText(goal.unit) &&
+      optional(goal.mode, mode => Object.hasOwn(goalModes, mode)) &&
+      (goal.mode === 'number' ? Number.isFinite(goal.target) : optional(goal.target, Number.isFinite)) &&
+      optional(goal.measurements, items => records(items, item => date(item.date) && Number.isFinite(item.value))) &&
+      records(goal.steps, step => string(step.text) && typeof step.done === 'boolean' && optionalDate(step.date) &&
+        optionalDate(step.doneAt) && optional(step.milestone, value => typeof value === 'boolean'))) ||
     !object(data.journal) || !Object.entries(data.journal).every(([day, entry]) =>
       date(day) && object(entry) && ['win', 'closedAt', 'lesson', 'gratitude', 'thoughts', 'mood'].every(field => optionalText(entry[field])) &&
       optional(entry.sleep, value => value === '' || (typeof value === 'number' && value >= 0 && value <= 24)) &&
