@@ -11,6 +11,8 @@ const planetFragmentSource = `
   precision mediump float;
   varying vec2 v_position;
   uniform vec3 u_angles;
+  uniform vec3 u_tint;
+  uniform float u_rings;
   const vec3 light = vec3(-0.961, 0.138, -0.239);
 
   void main() {
@@ -30,7 +32,7 @@ const planetFragmentSource = `
     float shadowDistance = length(cross(ringPoint, light));
     float litRing = dot(ringPoint, light) < 0.0 ? mix(0.20, 1.0, smoothstep(0.90, 1.10, shadowDistance)) : 1.0;
     vec3 ringColor = vec3(0.55, 0.52, 0.48) * bands * litRing;
-    ringAlpha *= 0.80 * bands;
+    ringAlpha *= 0.80 * bands * u_rings;
     vec4 color = vec4(ringColor, ringAlpha);
 
     if (globe) {
@@ -43,7 +45,7 @@ const planetFragmentSource = `
         + 0.38 * sin(latitude * 107.0 + longitude * 2.0) + 0.16 * sin(latitude * 211.0 - longitude * 3.0);
       vec3 warm = mix(vec3(0.52, 0.30, 0.22), vec3(0.94, 0.72, 0.56), 0.53 + 0.23 * cloud);
       float rim = pow(1.0 - front, 5.0) * smoothstep(-0.13, 0.62, cosine);
-      vec3 body = vec3(0.015, 0.013, 0.017) + warm * sun * 0.83 + vec3(0.28, 0.38, 0.70) * rim;
+      vec3 body = vec3(0.015, 0.013, 0.017) + warm * u_tint * sun * 0.96 + vec3(0.28, 0.38, 0.70) * rim;
       color = vec4(body, 1.0);
       if (ringZ > front) color.rgb = mix(body, ringColor, ringAlpha);
     } else if (distance < 1.09) {
@@ -84,9 +86,14 @@ function planetRenderer(canvas) {
   gl.enableVertexAttribArray(position);
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
   const angles = gl.getUniformLocation(program, 'u_angles');
-  return (longitude, pitch, roll) => {
+  const tint = gl.getUniformLocation(program, 'u_tint');
+  const rings = gl.getUniformLocation(program, 'u_rings');
+  return (longitude, pitch, roll, type = 0) => {
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniform3f(angles, longitude, pitch, roll);
+    const colors = [[1,1,1], [0.42,1.22,1.8], [1.3,0.7,0.48], [0.72,0.85,1.5]];
+    gl.uniform3fv(tint, colors[type]);
+    gl.uniform1f(rings, type === 0 ? 1 : type === 3 ? 0.65 : 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   };
 }
@@ -94,7 +101,7 @@ function planetRenderer(canvas) {
 function planetFallback(canvas) {
   const context = canvas.getContext('2d');
   if (!context) return null;
-  return (longitude, pitch, roll) => {
+  return (longitude, pitch, roll, type = 0) => {
     const {width, height} = canvas;
     context.setTransform(width / 5.34, 0, 0, height / 2.54, width / 2, height / 2);
     context.clearRect(-2.67, -1.27, 5.34, 2.54);
@@ -113,10 +120,10 @@ function planetFallback(canvas) {
       }
       context.restore();
     };
-    ring(false);
+    if (type === 0 || type === 3) ring(false);
     const surface = context.createRadialGradient(-1.08, -0.18, 0.10, -0.92, -0.12, 1.5);
     surface.addColorStop(0, '#d4b0a7');
-    surface.addColorStop(0.16, '#a16449');
+    surface.addColorStop(0.16, ['#a16449','#387c9f','#b45737','#777ba8'][type]);
     surface.addColorStop(0.51, '#130d11');
     surface.addColorStop(0.78, '#040306');
     context.beginPath();
@@ -135,128 +142,156 @@ function planetFallback(canvas) {
       context.stroke();
     }
     context.restore();
-    ring(true);
+    if (type === 0 || type === 3) ring(true);
   };
 }
 
+// Four reusable worlds share the starfield clock and scroll impulse. Only visible
+// worlds render; entering another section suspends the entire layer.
 function createPlanet() {
-  const view = document.createElement('div');
-  const control = document.createElement('button');
+  const layer = document.createElement('div');
+  layer.className = 'planet-field';
+  layer.hidden = true;
+  document.body.append(layer);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  let canvas = document.createElement('canvas');
-  let draw = planetRenderer(canvas);
-  if (!draw) {
-    canvas = document.createElement('canvas');
-    draw = planetFallback(canvas);
+  const names = ['Сатурн', 'Ледяная планета', 'Медная планета', 'Сиреневая планета'];
+  let anchor = null, elapsed = 0, nextArrival = 1, cursor = 0;
+  const worlds = names.map((name, type) => {
+    const view = document.createElement('div');
+    view.className = 'planet-view';
+    view.hidden = true;
+    let canvas = document.createElement('canvas');
+    let draw = planetRenderer(canvas);
+    if (!draw) { canvas = document.createElement('canvas'); draw = planetFallback(canvas); }
+    if (!draw) return null;
+    canvas.setAttribute('aria-hidden', 'true');
+    const control = document.createElement('button');
+    control.className = 'planet-control';
+    control.type = 'button';
+    control.setAttribute('aria-label', `Повернуть — ${name}`);
+    control.title = 'Повернуть планету';
+    view.append(canvas);
+    document.body.append(control);
+    control.hidden = true;
+    layer.append(view);
+    const world = {view, canvas, control, draw, type, active:false, age:0, x:0, y:0,
+      depth:0, rotation:type * 1.7, pitch:0, spin:0, bank:0, gesture:null, dragged:false};
+    control.addEventListener('pointerdown', event => {
+      if (!event.isPrimary || event.button !== 0) return;
+      world.gesture = {id:event.pointerId, x:event.clientX, y:event.clientY,
+        rotation:world.rotation, pitch:world.pitch, started:false};
+      world.dragged = false;
+    });
+    control.addEventListener('pointermove', event => {
+      const g = world.gesture;
+      if (!g || g.id !== event.pointerId) return;
+      const dx = event.clientX - g.x, dy = event.clientY - g.y;
+      if (!g.started) {
+        if (Math.abs(dx) + Math.abs(dy) < 5 || (event.pointerType === 'touch' && Math.abs(dx) <= Math.abs(dy))) return;
+        g.started = true;
+        control.setPointerCapture(event.pointerId);
+      }
+      world.rotation = g.rotation + dx * 0.018;
+      if (event.pointerType !== 'touch') world.pitch = Math.max(-0.65, Math.min(0.65, g.pitch + dy * 0.006));
+      if (reduced.matches) paint(world);
+    });
+    control.addEventListener('pointerup', () => {
+      world.dragged = Boolean(world.gesture?.started);
+      world.gesture = null;
+    });
+    for (const name of ['pointercancel', 'lostpointercapture']) control.addEventListener(name, () => { world.gesture = null; });
+    control.addEventListener('pointerleave', () => { if (!world.gesture?.started) world.gesture = null; });
+    control.addEventListener('click', event => {
+      if (!world.dragged || !event.detail) {
+        if (reduced.matches) { world.rotation += 0.6; paint(world); }
+        else world.spin += 1.8;
+      }
+      world.dragged = false;
+    });
+    return world;
+  }).filter(Boolean);
+
+  function spawn(world) {
+    world.active = true;
+    world.age = 0;
+    world.depth = 0;
+    const left = world.type % 2 === 1;
+    world.x = left ? 0.17 : 0.81;
+    world.y = (innerWidth < 700 ? [0.20, 0.28, 0.24, 0.18] : [0.36, 0.72, 0.62, 0.29])[world.type];
+    world.view.hidden = false;
+    world.control.hidden = false;
   }
-  if (!draw) return null;
-  view.className = 'planet-view';
-  canvas.setAttribute('aria-hidden', 'true');
-  control.type = 'button';
-  control.className = 'planet-control';
-  control.setAttribute('aria-label', 'Повернуть планету');
-  control.title = 'Повернуть планету';
-  view.append(canvas, control);
-  let anchor = null;
-  let visible = false;
-  let frame = 0;
-  let previous = 0;
-  let rotation = 0;
-  let pitch = 0;
-  let bank = 0;
-  let lastScroll = window.scrollY;
-  let gesture = null;
 
-  function update(time) {
-    frame = 0;
-    if (!anchor || !visible || document.hidden) return;
-    if (previous && time - previous < 30 && !reduced.matches) {
-      schedule();
-      return;
-    }
-    const dt = previous ? Math.min((time - previous) / 1000, 0.066) : 0;
-    const scroll = Math.max(0, window.scrollY);
-    const speed = dt ? (scroll - lastScroll) / dt : 0;
-    if (!reduced.matches) {
-      const target = Math.max(-1, Math.min(1, speed / 780));
-      bank += (target - bank) * (1 - Math.exp(-dt * 6));
-      if (!gesture) rotation = (rotation + dt * 0.16) % (2 * Math.PI);
-    }
-    lastScroll = scroll;
-    previous = time;
-    const shift = reduced.matches ? 0 : Math.min(scroll, 290);
-    view.style.transform = `translate(${shift * 0.09 + bank * 13}px,${shift * 0.29}px) scale(${1 + shift * 0.00072})`;
-    const ratio = Math.min(devicePixelRatio || 1, 1.45);
-    const width = Math.max(1, Math.round(canvas.clientWidth * ratio));
-    const height = Math.max(1, Math.round(canvas.clientHeight * ratio));
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
-    }
-    draw(rotation, pitch, bank);
-    if (!reduced.matches) schedule();
+  function paint(world) {
+    const mobile = innerWidth < 700;
+    const base = Math.min(innerWidth * (mobile ? 0.58 : 0.31), 490);
+    const scale = 0.63 + world.depth * 0.31;
+    const width = Math.round(base);
+    world.view.style.width = `${width}px`;
+    world.view.style.transform = `translate3d(${world.x * innerWidth - width / 2}px, ${world.y * innerHeight - width / 2 / 2.102}px, 0) scale(${scale})`;
+    const fadeIn = Math.min(1, world.age / 2.5);
+    const fadeOut = Math.min(1, Math.max(0, (27 - world.age) / 3));
+    world.control.style.width = `${Math.max(44, width * scale * 0.37)}px`;
+    world.control.style.left = `${world.x * innerWidth}px`;
+    world.control.style.top = `${world.y * innerHeight}px`;
+    world.control.style.opacity = `${fadeIn * fadeOut}`;
+    // The decorative flight never intercepts a card, field or navigation control.
+    const hero = anchor?.getBoundingClientRect?.();
+    const radius = Math.max(44, width * scale * 0.37) / 2;
+    const cx = world.x * innerWidth, cy = world.y * innerHeight;
+    const safe = hero && cx - radius > hero.left + hero.width * 0.66 &&
+      cx + radius < innerWidth && cy - radius > hero.top && cy + radius < hero.bottom;
+    world.control.style.pointerEvents = safe ? 'auto' : 'none';
+    world.control.tabIndex = safe ? 0 : -1;
+    world.view.style.opacity = reduced.matches ? '0.85' : `${fadeIn * fadeOut * 0.92}`;
+    const ratio = Math.min(devicePixelRatio || 1, mobile ? 1.4 : 1.65);
+    // Fixed backing size avoids reallocating GPU memory during the flight.
+    const w = Math.round(width * ratio), h = Math.round(w / 2.102);
+    if (world.canvas.width !== w || world.canvas.height !== h) { world.canvas.width = w; world.canvas.height = h; }
+    world.draw(world.rotation, world.pitch + Math.sin(world.rotation * 0.23) * 0.12, world.bank, world.type);
   }
 
-  function schedule() {
-    if (!frame && anchor && visible && !document.hidden) frame = requestAnimationFrame(update);
-  }
-
-  function resetMotion() {
-    previous = 0;
-    bank = 0;
-    lastScroll = window.scrollY;
-    schedule();
-  }
-
-  const observer = new IntersectionObserver(entries => {
-    visible = entries.some(entry => entry.target === anchor && entry.isIntersecting);
-    resetMotion();
-  });
-  window.addEventListener('resize', schedule);
-  document.addEventListener('visibilitychange', resetMotion);
-  reduced.addEventListener('change', resetMotion);
-
-  control.addEventListener('pointerdown', event => {
-    if (!event.isPrimary || event.button !== 0) return;
-    gesture = {id:event.pointerId, x:event.clientX, y:event.clientY, rotation, pitch, started:false};
-  });
-  control.addEventListener('pointermove', event => {
-    if (!gesture || gesture.id !== event.pointerId) return;
-    const dx = event.clientX - gesture.x;
-    const dy = event.clientY - gesture.y;
-    if (!gesture.started) {
-      if (Math.abs(dx) + Math.abs(dy) < 5 || (event.pointerType === 'touch' && Math.abs(dx) <= Math.abs(dy))) return;
-      gesture.started = true;
-      control.setPointerCapture(event.pointerId);
+  function tick(event) {
+    if (!anchor || document.hidden || reduced.matches) return;
+    const {dt, boost, bank} = event.detail;
+    elapsed += dt;
+    if (elapsed >= nextArrival && worlds.length) {
+      const world = worlds[cursor % worlds.length];
+      if (!world.active) { spawn(world); cursor++; }
+      nextArrival = elapsed + 24 + Math.random() * 10;
     }
-    rotation = gesture.rotation + dx * 0.022;
-    if (event.pointerType !== 'touch') pitch = Math.max(-0.75, Math.min(0.75, gesture.pitch + dy * 0.008));
-    schedule();
-  });
-  let dragged = false;
-  control.addEventListener('pointerup', event => {
-    dragged = gesture?.id === event.pointerId && gesture.started;
-    gesture = null;
-  });
-  control.addEventListener('pointercancel', () => { gesture = null; });
-  control.addEventListener('pointerleave', () => { if (!gesture?.started) gesture = null; });
-  control.addEventListener('click', event => {
-    if (!dragged || !event.detail) {
-      rotation += 0.6;
-      pitch = Math.max(-0.65, Math.min(0.65, Math.sin(rotation) * 0.35));
-      schedule();
+    for (const world of worlds) {
+      if (!world.active) continue;
+      if (!world.gesture && !world.control.matches(':focus-visible')) {
+        world.age += dt;
+        // Same vanishing point, radial expansion and signed vertical bank as stars.
+        const expansion = 0.011 + boost * (0.30 + (0.45 + world.depth * 0.1) * 1.18);
+        world.x += (world.x - 0.5) * expansion * dt;
+        world.y += ((world.y - 0.44) * expansion - 0.006 - bank * 0.12) * dt;
+        world.depth = Math.min(2.8, world.depth + dt * (0.024 + boost * 0.75));
+      }
+      world.bank += (bank * 0.35 - world.bank) * (1 - Math.exp(-dt * 5));
+      if (!world.gesture) world.rotation += dt * (0.22 + world.spin);
+      world.spin *= Math.exp(-dt * 2.8);
+      if (world.age > 27 || world.x < -0.4 || world.x > 1.4 || world.y < -0.5 || world.y > 1.5) {
+        world.active = false;
+        world.view.hidden = true;
+        world.control.hidden = true;
+        world.gesture = null;
+      } else paint(world);
     }
-    dragged = false;
+  }
+  window.addEventListener('jospat-space-frame', tick);
+  window.addEventListener('resize', () => { if (anchor) worlds.filter(w => w.active).forEach(paint); });
+  reduced.addEventListener('change', () => {
+    worlds.forEach(world => { world.active = false; world.view.hidden = true; world.control.hidden = true; });
+    elapsed = 0; nextArrival = 1;
+    if (anchor && reduced.matches && worlds[0]) { spawn(worlds[0]); paint(worlds[0]); }
   });
-
   return nextAnchor => {
-    if (nextAnchor === anchor) return;
-    observer.disconnect();
     anchor = nextAnchor;
-    visible = false;
-    if (anchor) {
-      anchor.append(view);
-      observer.observe(anchor);
-    }
+    layer.hidden = !anchor;
+    worlds.forEach(world => { world.control.hidden = !anchor || !world.active; });
+    if (anchor && reduced.matches && worlds[0]) { spawn(worlds[0]); paint(worlds[0]); }
   };
 }

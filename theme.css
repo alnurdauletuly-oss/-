@@ -172,7 +172,7 @@ form input:not([type=checkbox]), select, .journal-datebar input, .sleep-input in
 }
 
 /* A small rendered planet lives inside the hero, below the page controls. */
-.today-hero:has(.planet-view) {
+.today-hero:has(.planet-anchor) {
   isolation: isolate;
   overflow: clip;
   min-height: clamp(192px, 19vw, 265px);
@@ -180,8 +180,8 @@ form input:not([type=checkbox]), select, .journal-datebar input, .sleep-input in
   padding-inline-end: 34%;
   text-align: left;
 }
-.today-hero:has(.planet-view) h1 { font-size: clamp(36px, 5.5vw, 82px); }
-.today-hero:has(.planet-view) .today-lead {
+.today-hero:has(.planet-anchor) h1 { font-size: clamp(36px, 5.5vw, 82px); }
+.today-hero:has(.planet-anchor) .today-lead {
   margin-inline-start: 0;
   justify-items: start;
   text-wrap: pretty;
@@ -192,19 +192,19 @@ form input:not([type=checkbox]), select, .journal-datebar input, .sleep-input in
   inset: 0;
   pointer-events: none;
 }
+.planet-field { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.planet-field[hidden], .planet-view[hidden] { display: none; }
 .planet-view {
   position: absolute;
-  top: 50%;
-  right: 0;
-  width: 43%;
+  top: 0;
+  left: 0;
   aspect-ratio: 5.34 / 2.54;
-  margin-top: -10%;
-  will-change: transform;
+  will-change: transform, opacity;
 }
 .planet-view canvas { display: block; width: 100%; height: 100%; pointer-events: none; }
 .planet-control {
-  position: absolute;
-  inset: 50% auto auto 50%;
+  position: fixed;
+  z-index: 2;
   width: 37%;
   min-width: 44px;
   aspect-ratio: 1;
@@ -217,17 +217,18 @@ form input:not([type=checkbox]), select, .journal-datebar input, .sleep-input in
   border-radius: 50%;
   background: transparent;
 }
+.planet-control[hidden] { display: none; }
 .planet-control:active { cursor: grabbing; }
 .planet-control:hover { background: transparent; }
 .planet-control:focus-visible { outline-offset: 3px; }
 
 @media (max-width: 700px) {
-  .today-hero:has(.planet-view) {
+  .today-hero:has(.planet-anchor) {
     min-height: 146px;
     padding-inline-start: 0;
     padding-inline-end: 34%;
   }
-  .today-hero:has(.planet-view) h1 { font-size: clamp(27px, 7.5vw, 49px); }
+  .today-hero:has(.planet-anchor) h1 { font-size: clamp(27px, 7.5vw, 49px); }
   .today-hero h1 em { white-space: nowrap; }
-  .planet-view { right: -2%; width: 46%; margin-top: -11%; }
+
 }

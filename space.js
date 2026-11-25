@@ -134,6 +134,7 @@ function startStarfield() {
     }
     lastScroll = window.scrollY;
     draw(dt);
+    window.dispatchEvent(new CustomEvent('jospat-space-frame', {detail:{dt, boost, bank}}));
     frame = requestAnimationFrame(animate);
   }
 
