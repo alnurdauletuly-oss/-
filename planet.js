@@ -274,6 +274,15 @@ function createPlanet() {
     world.angularX = world.angularY = world.releaseTime = 0;
   }
 
+  function cancelGesture(world) {
+    const gesture = world.gesture;
+    world.gesture = null;
+    settle(world);
+    if (gesture && world.control.hasPointerCapture(gesture.id)) {
+      world.control.releasePointerCapture(gesture.id);
+    }
+  }
+
   function spawn(world) {
     settle(world);
     world.active = true;
@@ -346,15 +355,13 @@ function createPlanet() {
         world.angularX *= Math.exp(-dt * 4.5); world.angularY *= Math.exp(-dt * 4.5);
         world.releaseTime -= dt;
         if (world.releaseTime <= 0) settle(world);
-      } else if (!world.gesture && !world.control.matches(':focus-visible')) {
-        world.age += dt;
-        // Perspective projection: distance drives both size and the outward
-        // path. The shared starfield boost moves the camera forward faster.
-        world.depth = Math.max(0.55, world.depth - dt * (0.31 + boost * 3.2));
-        world.driftY -= bank * dt * 0.16;
-        world.x = 0.5 + world.routeX / world.depth;
-        world.y = 0.44 + (world.routeY + world.driftY) / world.depth;
       }
+      // Flight advances regardless of gestures, rotation inertia, or focus.
+      world.age += dt;
+      world.depth = Math.max(0.55, world.depth - dt * (0.31 + boost * 3.2));
+      world.driftY -= bank * dt * 0.16;
+      world.x = 0.5 + world.routeX / world.depth;
+      world.y = 0.44 + (world.routeY + world.driftY) / world.depth;
       world.bank += (bank * 0.35 - world.bank) * (1 - Math.exp(-dt * 5));
       if (!world.gesture) world.rotation += dt * (0.22 + world.spin);
       world.spin *= Math.exp(-dt * 2.8);
@@ -362,18 +369,23 @@ function createPlanet() {
         world.active = false;
         world.view.hidden = true;
         world.control.hidden = true;
-        world.gesture = null;
+        cancelGesture(world);
       } else paint(world);
     }
   }
   window.addEventListener('jospat-space-frame', tick);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) worlds.forEach(world => { world.gesture = null; settle(world); });
+    if (document.hidden) worlds.forEach(cancelGesture);
   });
   window.addEventListener('scroll', () => { boundsAt = -1; }, {passive:true});
   window.addEventListener('resize', () => { boundsAt = -1; if (anchor) worlds.filter(w => w.active).forEach(paint); });
   reduced.addEventListener('change', () => {
-    worlds.forEach(world => { world.gesture = null; settle(world); world.active = false; world.view.hidden = true; world.control.hidden = true; });
+    worlds.forEach(world => {
+      cancelGesture(world);
+      world.active = false;
+      world.view.hidden = true;
+      world.control.hidden = true;
+    });
     elapsed = 0; nextArrival = 0.2;
     if (anchor && reduced.matches && worlds[0]) { spawn(worlds[0]); paint(worlds[0]); }
   });
@@ -382,7 +394,7 @@ function createPlanet() {
     boundsAt = -1;
     layer.hidden = !anchor;
     worlds.forEach(world => {
-      if (!anchor) { world.gesture = null; settle(world); }
+      if (!anchor) cancelGesture(world);
       world.control.hidden = !anchor || !world.active;
     });
     if (anchor && reduced.matches && worlds[0]) { spawn(worlds[0]); paint(worlds[0]); }
