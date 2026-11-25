@@ -155,9 +155,9 @@ function noteToolsClick(button) {
   return false;
 }
 
-const entranceVersion = 'arrival-two-seconds';
+const entranceVersion = 'arrival-total-2s';
 const entranceRampMs = 500;
-const entranceCruiseMs = 2000;
+const entranceTotalMs = 2000;
 const entranceBrakeMs = 1000;
 const entranceSpeed = 1.35;
 let homeEntranceAt = null;
@@ -175,7 +175,7 @@ function homeEntranceFrame(time) {
   if (homeEntranceAt === null) return null;
   const elapsed = Math.max(0, time - homeEntranceAt);
   if (elapsed < entranceRampMs) return entranceSpeed * smoothEntrance(elapsed / entranceRampMs);
-  const brakeStart = entranceRampMs + entranceCruiseMs;
+  const brakeStart = entranceTotalMs - entranceBrakeMs;
   if (elapsed < brakeStart) return entranceSpeed;
   const braking = (elapsed - brakeStart) / entranceBrakeMs;
   if (braking >= 1) {
