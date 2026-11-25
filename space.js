@@ -13,7 +13,7 @@ function startStarfield() {
     [-0.06, 0.65, 1.06, 0.47], [0.78, -0.08, 0.24, 1.08]
   ];
   let width = 0, height = 0, frame = 0, lastFrame = 0, elapsed = 0;
-  let scene = null;
+  let warp = 0;
   let lastScroll = window.scrollY, boost = 0, bank = 0;
   let comet = null, previousRoute = -1, nextComet = 3;
 
@@ -105,9 +105,9 @@ function startStarfield() {
 
   function draw(dt = 0) {
     if (!width || !height) return;
-    const still = reduced.matches || Boolean(scene?.frozen);
+    const still = reduced.matches;
     context.clearRect(0, 0, width, height);
-    const speed = still ? 0 : Math.max(boost, scene?.speed ?? 0);
+    const speed = still ? 0 : Math.max(boost, warp);
     const count = width < 700 ? 85 : stars.length;
     for (let index = 0; index < count; index++) drawStar(stars[index], dt, still, speed);
     if (!reduced.matches) drawComet();
@@ -126,9 +126,8 @@ function startStarfield() {
   function animate(time) {
     const dt = lastFrame ? Math.min((time - lastFrame) / 1000, 0.05) : 0;
     lastFrame = time;
-    scene = homeEntranceFrame(time);
-    const frozen = Boolean(scene?.frozen);
-    if (dt > 0 && !frozen) {
+    warp = homeEntranceFrame(time);
+    if (dt > 0) {
       const speed = (window.scrollY - lastScroll) / dt;
       const target = Math.min(Math.abs(speed) / 1100, 1);
       const rate = target > boost ? 15 : 4.8;
@@ -137,17 +136,15 @@ function startStarfield() {
       elapsed += dt;
     }
     lastScroll = window.scrollY;
-    draw(frozen ? 0 : dt);
-    if (!frozen) {
-      const planetBoost = Math.max(boost, (scene?.speed ?? 0) * 0.36);
-      window.dispatchEvent(new CustomEvent('jospat-space-frame', {detail:{dt, boost:planetBoost, bank}}));
-    }
+    draw(dt);
+    window.dispatchEvent(new CustomEvent('jospat-space-frame', {detail:{dt, boost, bank, warp}}));
     frame = requestAnimationFrame(animate);
   }
 
   function updateMotion() {
     cancelAnimationFrame(frame);
     boost = 0;
+    warp = 0;
     bank = 0;
     lastFrame = 0;
     lastScroll = window.scrollY;

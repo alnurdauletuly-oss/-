@@ -211,7 +211,7 @@ function createPlanet() {
     const world = {view, canvas, control, draw, type, active:false, age:0, x:0, y:0,
       depth:0, rotation:type * 1.7, pitch:0, spin:0, bank:0, gesture:null, dragged:false, angularX:0, angularY:0, releaseTime:0, orientation:[0,0,0,1]};
     control.addEventListener('pointerdown', event => {
-      if (!event.isPrimary || event.button !== 0 || document.body.classList.contains('home-reveal')) return;
+      if (!event.isPrimary || event.button !== 0) return;
       world.gesture = {id:event.pointerId, x:event.clientX, y:event.clientY,
 
         lastX:event.clientX, lastY:event.clientY, time:event.timeStamp, started:false};
@@ -254,7 +254,7 @@ function createPlanet() {
     });
     control.addEventListener('keydown', event => {
       const direction = {ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1]}[event.key];
-      if (!direction || document.body.classList.contains('home-reveal')) return;
+      if (!direction) return;
       event.preventDefault();
       const step = event.shiftKey ? 0.4 : 0.15;
       rotatePlanet(world, direction[0] * step, direction[1] * step);
@@ -283,11 +283,11 @@ function createPlanet() {
     }
   }
 
-  function spawn(world) {
+  function spawn(world, warp = 0) {
     settle(world);
     world.active = true;
-    world.age = 0;
-    world.depth = 7;
+    world.age = warp ? 0.32 : 0;
+    world.depth = warp ? (world.type === 1 ? 14.5 : 10) : 7;
     const left = world.type % 2 === 1;
     world.routeX = (left ? -1 : 1) * [0.82, 1.04, 1.12, 0.92][world.type];
     world.routeY = [-0.72, -0.48, -0.35, -0.90][world.type];
@@ -337,15 +337,15 @@ function createPlanet() {
 
   function tick(event) {
     if (!anchor || document.hidden || reduced.matches) return;
-    const {dt, boost, bank} = event.detail;
+    const {dt, boost, bank, warp = 0} = event.detail;
     elapsed += dt;
-    if (elapsed >= nextArrival && worlds.length) {
+    if ((elapsed >= nextArrival || (warp && !cursor)) && worlds.length) {
       const next = Array.from({length:worlds.length}, (_, i) => (cursor + i) % worlds.length)
         .find(index => !worlds[index].active);
       if (next !== undefined) {
-        spawn(worlds[next]);
+        spawn(worlds[next], warp);
         cursor = (next + 1) % worlds.length;
-        nextArrival = elapsed + 5 + Math.random() * 3;
+        nextArrival = elapsed + (warp && cursor === 1 ? 1.45 : 5 + Math.random() * 3);
       } else nextArrival = elapsed + 0.5;
     }
     for (const world of worlds) {
@@ -358,7 +358,10 @@ function createPlanet() {
       }
       // Flight advances regardless of gestures, rotation inertia, or focus.
       world.age += dt;
-      world.depth = Math.max(0.55, world.depth - dt * (0.31 + boost * 3.2));
+      // The shared warp expands the projection like the stars. Perspective
+      // still lets farther worlds cross the screen more slowly than near ones.
+      const projectedDepth = world.depth * Math.exp(-Math.max(boost, warp) * 0.82 * dt);
+      world.depth = Math.max(0.55, projectedDepth - dt * 0.31);
       world.driftY -= bank * dt * 0.16;
       world.x = 0.5 + world.routeX / world.depth;
       world.y = 0.44 + (world.routeY + world.driftY) / world.depth;
@@ -374,7 +377,6 @@ function createPlanet() {
     }
   }
   window.addEventListener('jospat-space-frame', tick);
-  window.addEventListener('jospat-arrival-stop', () => worlds.forEach(cancelGesture));
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) worlds.forEach(cancelGesture);
   });

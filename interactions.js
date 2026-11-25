@@ -155,8 +155,9 @@ function noteToolsClick(button) {
   return false;
 }
 
-const entranceAccelerationMs = 2500;
-const entranceRevealMs = 1550;
+const entranceCruiseMs = 2500;
+const entranceBrakeMs = 1000;
+const entranceSpeed = 1.35;
 let homeEntranceAt = null;
 
 function finishHomeEntrance() {
@@ -165,20 +166,17 @@ function finishHomeEntrance() {
 }
 
 function homeEntranceFrame(time) {
-  if (homeEntranceAt === null) return null;
+  if (homeEntranceAt === null) return 0;
   const elapsed = time - homeEntranceAt;
-  if (elapsed < entranceAccelerationMs) {
-    return {speed: 1.35 * Math.max(0, elapsed / entranceAccelerationMs) ** 1.6, frozen:false};
-  }
-  if (elapsed >= entranceAccelerationMs + entranceRevealMs) {
+  if (elapsed < entranceCruiseMs) return entranceSpeed;
+  const braking = (elapsed - entranceCruiseMs) / entranceBrakeMs;
+  if (braking >= 1) {
     finishHomeEntrance();
-    return null;
+    return 0;
   }
-  if (!document.body.classList.contains('home-reveal')) {
-    document.body.classList.replace('home-warp', 'home-reveal');
-    window.dispatchEvent(new Event('jospat-arrival-stop'));
-  }
-  return {speed:0, frozen:true};
+  document.body.classList.replace('home-warp', 'home-reveal');
+  // Smoothstep keeps speed continuous at both ends of the transition.
+  return entranceSpeed * (1 - braking * braking * (3 - 2 * braking));
 }
 
 function startHomeEntrance(spaceReady) {
