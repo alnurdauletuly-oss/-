@@ -155,9 +155,9 @@ function noteToolsClick(button) {
   return false;
 }
 
-const entranceVersion = 'arrival-ramp';
+const entranceVersion = 'arrival-two-seconds';
 const entranceRampMs = 500;
-const entranceCruiseMs = 3000;
+const entranceCruiseMs = 2000;
 const entranceBrakeMs = 1000;
 const entranceSpeed = 1.35;
 let homeEntranceAt = null;
