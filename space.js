@@ -126,7 +126,8 @@ function startStarfield() {
   function animate(time) {
     const dt = lastFrame ? Math.min((time - lastFrame) / 1000, 0.05) : 0;
     lastFrame = time;
-    warp = homeEntranceFrame(time);
+    const entrance = homeEntranceFrame(time);
+    warp = entrance ?? 0;
     if (dt > 0) {
       const speed = (window.scrollY - lastScroll) / dt;
       const target = Math.min(Math.abs(speed) / 1100, 1);
@@ -137,7 +138,7 @@ function startStarfield() {
     }
     lastScroll = window.scrollY;
     draw(dt);
-    window.dispatchEvent(new CustomEvent('jospat-space-frame', {detail:{dt, boost, bank, warp}}));
+    window.dispatchEvent(new CustomEvent('jospat-space-frame', {detail:{dt, boost, bank, warp, arriving:entrance !== null}}));
     frame = requestAnimationFrame(animate);
   }
 

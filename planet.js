@@ -283,11 +283,11 @@ function createPlanet() {
     }
   }
 
-  function spawn(world, warp = 0) {
+  function spawn(world, arriving = false) {
     settle(world);
     world.active = true;
-    world.age = warp ? 0.32 : 0;
-    world.depth = warp ? (world.type === 1 ? 14.5 : 10) : 7;
+    world.age = arriving ? 0.32 : 0;
+    world.depth = arriving ? (world.type === 1 ? 16.5 : 10) : 7;
     const left = world.type % 2 === 1;
     world.routeX = (left ? -1 : 1) * [0.82, 1.04, 1.12, 0.92][world.type];
     world.routeY = [-0.72, -0.48, -0.35, -0.90][world.type];
@@ -337,15 +337,15 @@ function createPlanet() {
 
   function tick(event) {
     if (!anchor || document.hidden || reduced.matches) return;
-    const {dt, boost, bank, warp = 0} = event.detail;
+    const {dt, boost, bank, warp = 0, arriving = false} = event.detail;
     elapsed += dt;
-    if ((elapsed >= nextArrival || (warp && !cursor)) && worlds.length) {
+    if ((elapsed >= nextArrival || (arriving && !cursor)) && worlds.length) {
       const next = Array.from({length:worlds.length}, (_, i) => (cursor + i) % worlds.length)
         .find(index => !worlds[index].active);
       if (next !== undefined) {
-        spawn(worlds[next], warp);
+        spawn(worlds[next], arriving);
         cursor = (next + 1) % worlds.length;
-        nextArrival = elapsed + (warp && cursor === 1 ? 1.45 : 5 + Math.random() * 3);
+        nextArrival = elapsed + (arriving && cursor === 1 ? 2.2 : 5 + Math.random() * 3);
       } else nextArrival = elapsed + 0.5;
     }
     for (const world of worlds) {

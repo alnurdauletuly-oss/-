@@ -155,7 +155,9 @@ function noteToolsClick(button) {
   return false;
 }
 
-const entranceCruiseMs = 2500;
+const entranceVersion = 'arrival-ramp';
+const entranceRampMs = 500;
+const entranceCruiseMs = 3000;
 const entranceBrakeMs = 1000;
 const entranceSpeed = 1.35;
 let homeEntranceAt = null;
@@ -165,18 +167,23 @@ function finishHomeEntrance() {
   document.body.classList.remove('home-warp', 'home-reveal');
 }
 
+function smoothEntrance(progress) {
+  return progress * progress * (3 - 2 * progress);
+}
+
 function homeEntranceFrame(time) {
-  if (homeEntranceAt === null) return 0;
-  const elapsed = time - homeEntranceAt;
-  if (elapsed < entranceCruiseMs) return entranceSpeed;
-  const braking = (elapsed - entranceCruiseMs) / entranceBrakeMs;
+  if (homeEntranceAt === null) return null;
+  const elapsed = Math.max(0, time - homeEntranceAt);
+  if (elapsed < entranceRampMs) return entranceSpeed * smoothEntrance(elapsed / entranceRampMs);
+  const brakeStart = entranceRampMs + entranceCruiseMs;
+  if (elapsed < brakeStart) return entranceSpeed;
+  const braking = (elapsed - brakeStart) / entranceBrakeMs;
   if (braking >= 1) {
     finishHomeEntrance();
-    return 0;
+    return null;
   }
   document.body.classList.replace('home-warp', 'home-reveal');
-  // Smoothstep keeps speed continuous at both ends of the transition.
-  return entranceSpeed * (1 - braking * braking * (3 - 2 * braking));
+  return entranceSpeed * (1 - smoothEntrance(braking));
 }
 
 function startHomeEntrance(spaceReady) {
@@ -191,8 +198,8 @@ function startHomeEntrance(spaceReady) {
     if (entered) return;
     entered = true;
     try {
-      if (sessionStorage.getItem('jospat-home-entered')) return;
-      sessionStorage.setItem('jospat-home-entered', '1');
+      if (sessionStorage.getItem('jospat-home-entered') === entranceVersion) return;
+      sessionStorage.setItem('jospat-home-entered', entranceVersion);
     } catch {}
     if (!spaceReady || motion.matches) {
       hero.classList.add('home-quiet-entry');
