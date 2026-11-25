@@ -11,17 +11,20 @@ const planetFragmentSource = `
   precision mediump float;
   varying vec2 v_position;
   uniform vec3 u_angles;
+  uniform mat3 u_orientation;
   uniform vec3 u_tint;
   uniform float u_rings;
   const vec3 light = vec3(-0.961, 0.138, -0.239);
 
   void main() {
-    vec2 p = v_position * vec2(2.67, 1.27);
+    vec2 p = v_position * 2.67;
     float distance = length(p);
     bool globe = distance < 1.0;
     float front = sqrt(max(0.0, 1.0 - dot(p, p)));
-    vec3 ringNormal = normalize(vec3(-0.29 + u_angles.z * 0.17, 0.96, 0.31 + u_angles.y * 0.30));
-    float ringZ = -dot(p, ringNormal.xy) / ringNormal.z;
+    vec3 baseAxis = normalize(vec3(-0.29, 0.96, 0.31));
+    vec3 ringNormal = u_orientation * baseAxis;
+    float denominator = (ringNormal.z < 0.0 ? -1.0 : 1.0) * max(abs(ringNormal.z), 0.003);
+    float ringZ = -dot(p, ringNormal.xy) / denominator;
     vec3 ringPoint = vec3(p, ringZ);
     float ringRadius = length(ringPoint);
     float ringAlpha = smoothstep(1.20, 1.28, ringRadius) * (1.0 - smoothstep(2.42, 2.50, ringRadius));
@@ -32,15 +35,18 @@ const planetFragmentSource = `
     float shadowDistance = length(cross(ringPoint, light));
     float litRing = dot(ringPoint, light) < 0.0 ? mix(0.20, 1.0, smoothstep(0.90, 1.10, shadowDistance)) : 1.0;
     vec3 ringColor = vec3(0.55, 0.52, 0.48) * bands * litRing;
-    ringAlpha *= 0.80 * bands * u_rings;
+    ringAlpha *= 0.80 * bands * u_rings * smoothstep(0.003, 0.025, abs(ringNormal.z));
     vec4 color = vec4(ringColor, ringAlpha);
 
     if (globe) {
       vec3 normal = vec3(p, front);
       float cosine = dot(normal, light);
       float sun = pow(max(cosine, 0.0), 0.72);
-      float latitude = dot(normal, ringNormal);
-      float longitude = atan(normal.x, normal.z) + u_angles.x;
+      vec3 local = vec3(dot(normal, u_orientation[0]), dot(normal, u_orientation[1]), dot(normal, u_orientation[2]));
+      vec3 equatorX = normalize(cross(baseAxis, vec3(0.0, 0.0, 1.0)));
+      vec3 equatorZ = cross(equatorX, baseAxis);
+      float latitude = dot(local, baseAxis);
+      float longitude = atan(dot(local, equatorX), dot(local, equatorZ)) + u_angles.x;
       float cloud = sin(latitude * 41.0 + 0.55 * sin(longitude * 3.0 + latitude * 12.0))
         + 0.38 * sin(latitude * 107.0 + longitude * 2.0) + 0.16 * sin(latitude * 211.0 - longitude * 3.0);
       vec3 warm = mix(vec3(0.52, 0.30, 0.22), vec3(0.94, 0.72, 0.56), 0.53 + 0.23 * cloud);
@@ -86,11 +92,13 @@ function planetRenderer(canvas) {
   gl.enableVertexAttribArray(position);
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
   const angles = gl.getUniformLocation(program, 'u_angles');
+  const orientation = gl.getUniformLocation(program, 'u_orientation');
   const tint = gl.getUniformLocation(program, 'u_tint');
   const rings = gl.getUniformLocation(program, 'u_rings');
-  return (longitude, pitch, roll, type = 0) => {
+  return (longitude, pitch, roll, type = 0, matrix = planetRotationMatrix([0,0,0,1])) => {
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniform3f(angles, longitude, pitch, roll);
+    gl.uniformMatrix3fv(orientation, false, matrix);
     const colors = [[1,1,1], [0.42,1.22,1.8], [1.3,0.7,0.48], [0.72,0.85,1.5]];
     gl.uniform3fv(tint, colors[type]);
     gl.uniform1f(rings, type === 0 ? 1 : type === 3 ? 0.65 : 0);
@@ -101,14 +109,18 @@ function planetRenderer(canvas) {
 function planetFallback(canvas) {
   const context = canvas.getContext('2d');
   if (!context) return null;
-  return (longitude, pitch, roll, type = 0) => {
+  return (longitude, pitch, roll, type = 0, matrix = planetRotationMatrix([0,0,0,1])) => {
     const {width, height} = canvas;
-    context.setTransform(width / 5.34, 0, 0, height / 2.54, width / 2, height / 2);
-    context.clearRect(-2.67, -1.27, 5.34, 2.54);
+    context.setTransform(width / 5.34, 0, 0, height / 5.34, width / 2, height / 2);
+    context.clearRect(-2.67, -2.67, 5.34, 5.34);
     const ring = front => {
       context.save();
-      context.rotate(-0.30 + roll * 0.17);
-      const edge = 0.36 + pitch * 0.23;
+      const nx = -0.29 * matrix[0] + 0.96 * matrix[3] + 0.31 * matrix[6];
+      const ny = -0.29 * matrix[1] + 0.96 * matrix[4] + 0.31 * matrix[7];
+      const nz = -0.29 * matrix[2] + 0.96 * matrix[5] + 0.31 * matrix[8];
+      context.rotate(Math.atan2(nx, ny));
+      const edge = Math.max(0.003, Math.abs(nz));
+      if (nz < 0) front = !front;
       for (let index = 0; index < 25; index++) {
         if ([15,16,21].includes(index)) continue;
         const size = 1.23 + index * 0.049;
@@ -132,6 +144,7 @@ function planetFallback(canvas) {
     context.fill();
     context.save();
     context.clip();
+    context.rotate(Math.atan2(matrix[1], matrix[0]));
     context.strokeStyle = 'rgba(240,178,150,.14)';
     context.lineWidth = 0.012;
     for (let index = 0; index < 14; index++) {
@@ -144,6 +157,26 @@ function planetFallback(canvas) {
     context.restore();
     if (type === 0 || type === 3) ring(true);
   };
+}
+
+// Unit quaternions keep repeated diagonal drags free of axis locking.
+function planetRotationMatrix([x,y,z,w]) {
+  return new Float32Array([
+    1-2*(y*y+z*z), 2*(x*y+z*w), 2*(x*z-y*w),
+    2*(x*y-z*w), 1-2*(x*x+z*z), 2*(y*z+x*w),
+    2*(x*z+y*w), 2*(y*z-x*w), 1-2*(x*x+y*y)
+  ]);
+}
+
+function rotatePlanet(world, horizontal, vertical) {
+  const angle = Math.hypot(horizontal, vertical);
+  if (!angle) return;
+  const factor = Math.sin(angle / 2) / angle;
+  const ax = vertical * factor, ay = horizontal * factor, aw = Math.cos(angle / 2);
+  const [x,y,z,w] = world.orientation;
+  const q = [aw*x + ax*w + ay*z, aw*y - ax*z + ay*w, aw*z + ax*y - ay*x, aw*w - ax*x - ay*y];
+  const length = Math.hypot(...q);
+  world.orientation = q.map(value => value / length);
 }
 
 // Four reusable worlds share the starfield clock and scroll impulse. Only visible
@@ -169,21 +202,21 @@ function createPlanet() {
     const control = document.createElement('button');
     control.className = 'planet-control';
     control.type = 'button';
-    control.setAttribute('aria-label', `Переместить — ${name}`);
-    control.title = 'Перетащите планету в любую сторону. Стрелки — перемещение.';
+    control.setAttribute('aria-label', `Вращать в 3D — ${name}`);
+    control.title = 'Вращайте планету пальцем или мышью. Стрелки — поворот в 3D.';
     view.append(canvas);
     document.body.append(control);
     control.hidden = true;
     layer.append(view);
     const world = {view, canvas, control, draw, type, active:false, age:0, x:0, y:0,
-      depth:0, rotation:type * 1.7, pitch:0, spin:0, bank:0, gesture:null, dragged:false, vx:0, vy:0, releaseTime:0};
+      depth:0, rotation:type * 1.7, pitch:0, spin:0, bank:0, gesture:null, dragged:false, angularX:0, angularY:0, releaseTime:0, orientation:[0,0,0,1]};
     control.addEventListener('pointerdown', event => {
       if (!event.isPrimary || event.button !== 0) return;
       world.gesture = {id:event.pointerId, x:event.clientX, y:event.clientY,
-        originX:world.x, originY:world.y, rotation:world.rotation, pitch:world.pitch,
+
         lastX:event.clientX, lastY:event.clientY, time:event.timeStamp, started:false};
       world.dragged = false;
-      world.vx = world.vy = 0;
+      world.angularX = world.angularY = 0;
       world.releaseTime = 0;
       control.setPointerCapture(event.pointerId);
     });
@@ -194,23 +227,24 @@ function createPlanet() {
       if (!g.started) {
         if (Math.hypot(dx, dy) < 4) return;
         g.started = true;
-        document.body.append(world.view);
-        world.view.classList.add('is-held');
+
       }
       const seconds = Math.max(0.008, (event.timeStamp - g.time) / 1000);
-      world.vx = Math.max(-650 / innerWidth, Math.min(650 / innerWidth, (event.clientX - g.lastX) / innerWidth / seconds));
-      world.vy = Math.max(-650 / innerHeight, Math.min(650 / innerHeight, (event.clientY - g.lastY) / innerHeight / seconds));
+      const diameter = Math.max(44, Number.parseFloat(control.style.width) || 44);
+      const sensitivity = Math.min(0.035, 3.5 / diameter);
+      const horizontal = (event.clientX - g.lastX) * sensitivity;
+      const vertical = (event.clientY - g.lastY) * sensitivity;
+      world.angularX = Math.max(-5, Math.min(5, horizontal / seconds));
+      world.angularY = Math.max(-5, Math.min(5, vertical / seconds));
+      rotatePlanet(world, horizontal, vertical);
       g.lastX = event.clientX; g.lastY = event.clientY; g.time = event.timeStamp;
-      moveWorld(world, g.originX + dx / innerWidth, g.originY + dy / innerHeight);
-      world.rotation = g.rotation + dx * 0.012;
-      world.pitch = Math.max(-0.65, Math.min(0.65, g.pitch + dy * 0.006));
       paint(world);
     });
     control.addEventListener('pointerup', event => {
       const g = world.gesture;
       if (!g || g.id !== event.pointerId) return;
       world.dragged = g.started;
-      if (event.timeStamp - g.time > 100) world.vx = world.vy = 0;
+      if (event.timeStamp - g.time > 100) world.angularX = world.angularY = 0;
       world.gesture = null;
       if (g.started && !reduced.matches) world.releaseTime = 0.85;
       else settle(world);
@@ -222,31 +256,22 @@ function createPlanet() {
       const direction = {ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1]}[event.key];
       if (!direction) return;
       event.preventDefault();
-      const step = event.shiftKey ? 40 : 16;
-      moveWorld(world, world.x + direction[0] * step / innerWidth, world.y + direction[1] * step / innerHeight);
+      const step = event.shiftKey ? 0.4 : 0.15;
+      rotatePlanet(world, direction[0] * step, direction[1] * step);
       paint(world);
     });
     control.addEventListener('click', event => {
       if (!world.dragged || !event.detail) {
-        if (reduced.matches) { world.rotation += 0.6; paint(world); }
-        else world.spin += 1.8;
+        if (reduced.matches) { rotatePlanet(world, 0.4, 0.15); paint(world); }
+        else { world.angularX = 1.4; world.angularY = 0.45; world.releaseTime = 0.85; }
       }
       world.dragged = false;
     });
     return world;
   }).filter(Boolean);
 
-  function moveWorld(world, x, y) {
-    world.x = Math.max(24 / innerWidth, Math.min(1 - 24 / innerWidth, x));
-    world.y = Math.max(24 / innerHeight, Math.min(1 - 24 / innerHeight, y));
-    world.routeX = (world.x - 0.5) * world.depth;
-    world.routeY = (world.y - 0.44) * world.depth - world.driftY;
-  }
-
   function settle(world) {
-    world.vx = world.vy = world.releaseTime = 0;
-    world.view.classList.remove('is-held');
-    layer.append(world.view);
+    world.angularX = world.angularY = world.releaseTime = 0;
   }
 
   function spawn(world) {
@@ -271,7 +296,7 @@ function createPlanet() {
     const scale = reduced.matches ? 0.75 : 1.7 / world.depth;
     const width = Math.round(base);
     world.view.style.width = `${width}px`;
-    world.view.style.transform = `translate3d(${world.x * innerWidth - width / 2}px, ${world.y * innerHeight - width / 2 / 2.102}px, 0) scale(${scale})`;
+    world.view.style.transform = `translate3d(${world.x * innerWidth - width / 2}px, ${world.y * innerHeight - width / 2}px, 0) scale(${scale})`;
     const fadeIn = Math.min(1, world.age / 0.8);
     const fadeOut = Math.min(1, Math.max(0, (world.depth - 0.55) / 0.5));
     world.control.style.width = `${Math.max(44, width * scale * 0.37)}px`;
@@ -296,9 +321,9 @@ function createPlanet() {
     world.view.style.opacity = reduced.matches ? '0.85' : `${fadeIn * fadeOut * 0.92}`;
     const ratio = Math.min(devicePixelRatio || 1, mobile ? 1.4 : 1.65);
     // Fixed backing size avoids reallocating GPU memory during the flight.
-    const w = Math.round(width * ratio), h = Math.round(w / 2.102);
+    const w = Math.round(width * ratio), h = w;
     if (world.canvas.width !== w || world.canvas.height !== h) { world.canvas.width = w; world.canvas.height = h; }
-    world.draw(world.rotation, world.pitch + Math.sin(world.rotation * 0.23) * 0.12, world.bank, world.type);
+    world.draw(world.rotation, world.pitch + Math.sin(world.rotation * 0.23) * 0.12, world.bank, world.type, planetRotationMatrix(world.orientation));
   }
 
   function tick(event) {
@@ -317,8 +342,8 @@ function createPlanet() {
     for (const world of worlds) {
       if (!world.active) continue;
       if (!world.gesture && world.releaseTime > 0) {
-        moveWorld(world, world.x + world.vx * dt, world.y + world.vy * dt);
-        world.vx *= Math.exp(-dt * 7); world.vy *= Math.exp(-dt * 7);
+        rotatePlanet(world, world.angularX * dt, world.angularY * dt);
+        world.angularX *= Math.exp(-dt * 4.5); world.angularY *= Math.exp(-dt * 4.5);
         world.releaseTime -= dt;
         if (world.releaseTime <= 0) settle(world);
       } else if (!world.gesture && !world.control.matches(':focus-visible')) {
