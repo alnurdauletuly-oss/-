@@ -387,10 +387,10 @@ function focusSections() {
   $('sections')?.focus({preventScroll:true});
   $('sections')?.scrollIntoView();
 }
-startStarfield();
+const spaceReady = startStarfield();
 render();
 startWorkspaceInteractions();
-startHomeEntrance();
+startHomeEntrance(spaceReady);
 startTodayQuoteClock();
 startCloseDay();
 startBackup();

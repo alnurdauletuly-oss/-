@@ -83,8 +83,8 @@ function todayScreen() {
   return `<section class="today-stage" id="today-overview" aria-labelledby="today-title">
     <div class="today-hero">
       <div id="planet-anchor" class="planet-anchor"></div>
-      <p class="today-date"><time datetime="${date}">${fmt(now, {weekday:'long', day:'numeric', month:'long'})}</time></p>
-      <h1 id="today-title">Твой день. <em>Твой темп.</em></h1>
+      <p class="today-date"><span class="today-brand-mark" aria-hidden="true"></span><time datetime="${date}">${fmt(now, {weekday:'long', day:'numeric', month:'long'})}</time></p>
+      <h1 id="today-title"><span class="today-title-day">Твой день.</span> <em>Твой темп.</em></h1>
       <p class="today-lead"><q id="today-quote">${safe(todayQuote(now))}</q></p>
     </div>
     <div class="today-glow" aria-hidden="true"></div>

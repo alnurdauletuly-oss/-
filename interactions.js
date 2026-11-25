@@ -155,18 +155,55 @@ function noteToolsClick(button) {
   return false;
 }
 
-function startHomeEntrance() {
-  function enter() {
+const entranceAccelerationMs = 2500;
+const entranceRevealMs = 1550;
+let homeEntranceAt = null;
+
+function finishHomeEntrance() {
+  homeEntranceAt = null;
+  document.body.classList.remove('home-warp', 'home-reveal');
+}
+
+function homeEntranceFrame(time) {
+  if (homeEntranceAt === null) return null;
+  const elapsed = time - homeEntranceAt;
+  if (elapsed < entranceAccelerationMs) {
+    return {speed: 1.35 * Math.max(0, elapsed / entranceAccelerationMs) ** 1.6, frozen:false};
+  }
+  if (elapsed >= entranceAccelerationMs + entranceRevealMs) {
+    finishHomeEntrance();
+    return null;
+  }
+  if (!document.body.classList.contains('home-reveal')) {
+    document.body.classList.replace('home-warp', 'home-reveal');
+    window.dispatchEvent(new Event('jospat-arrival-stop'));
+  }
+  return {speed:0, frozen:true};
+}
+
+function startHomeEntrance(spaceReady) {
+  const motion = matchMedia('(prefers-reduced-motion: reduce)');
+  let entered = false;
+  function updateRoute() {
     const hero = document.querySelector('.today-hero');
-    if (!hero) return;
-    window.removeEventListener('hashchange', enter);
+    if (!hero) {
+      finishHomeEntrance();
+      return;
+    }
+    if (entered) return;
+    entered = true;
     try {
       if (sessionStorage.getItem('jospat-home-entered')) return;
       sessionStorage.setItem('jospat-home-entered', '1');
     } catch {}
-    hero.classList.add('home-entering');
-    window.dispatchEvent(new Event('jospat-home-entrance'));
+    if (!spaceReady || motion.matches) {
+      hero.classList.add('home-quiet-entry');
+      return;
+    }
+    homeEntranceAt = performance.now();
+    document.body.classList.add('home-warp');
   }
-  window.addEventListener('hashchange', enter);
-  enter();
+  motion.addEventListener('change', finishHomeEntrance);
+  window.addEventListener('hashchange', updateRoute);
+  updateRoute();
 }

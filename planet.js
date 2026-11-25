@@ -211,7 +211,7 @@ function createPlanet() {
     const world = {view, canvas, control, draw, type, active:false, age:0, x:0, y:0,
       depth:0, rotation:type * 1.7, pitch:0, spin:0, bank:0, gesture:null, dragged:false, angularX:0, angularY:0, releaseTime:0, orientation:[0,0,0,1]};
     control.addEventListener('pointerdown', event => {
-      if (!event.isPrimary || event.button !== 0) return;
+      if (!event.isPrimary || event.button !== 0 || document.body.classList.contains('home-reveal')) return;
       world.gesture = {id:event.pointerId, x:event.clientX, y:event.clientY,
 
         lastX:event.clientX, lastY:event.clientY, time:event.timeStamp, started:false};
@@ -254,7 +254,7 @@ function createPlanet() {
     });
     control.addEventListener('keydown', event => {
       const direction = {ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1]}[event.key];
-      if (!direction) return;
+      if (!direction || document.body.classList.contains('home-reveal')) return;
       event.preventDefault();
       const step = event.shiftKey ? 0.4 : 0.15;
       rotatePlanet(world, direction[0] * step, direction[1] * step);
@@ -374,6 +374,7 @@ function createPlanet() {
     }
   }
   window.addEventListener('jospat-space-frame', tick);
+  window.addEventListener('jospat-arrival-stop', () => worlds.forEach(cancelGesture));
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) worlds.forEach(cancelGesture);
   });

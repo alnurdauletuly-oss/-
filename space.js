@@ -1,7 +1,7 @@
 function startStarfield() {
   const canvas = $('starfield');
   const context = canvas?.getContext('2d');
-  if (!context) return;
+  if (!context) return false;
 
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const stars = Array.from({length:155}, () => ({
@@ -13,8 +13,7 @@ function startStarfield() {
     [-0.06, 0.65, 1.06, 0.47], [0.78, -0.08, 0.24, 1.08]
   ];
   let width = 0, height = 0, frame = 0, lastFrame = 0, elapsed = 0;
-  let entranceAt = null;
-  window.addEventListener('jospat-home-entrance', () => { entranceAt = elapsed; });
+  let scene = null;
   let lastScroll = window.scrollY, boost = 0, bank = 0;
   let comet = null, previousRoute = -1, nextComet = 3;
 
@@ -52,7 +51,7 @@ function startStarfield() {
     star.x += vx * dt / width;
     star.y += vy * dt / height;
     if (star.x < -0.03 || star.x > 1.03 || star.y < -0.03 || star.y > 1.03) {
-      if (boost > 0.08) {
+      if (speed > 0.08) {
         star.x = 0.14 + Math.random() * 0.72;
         star.y = 0.12 + Math.random() * 0.64;
       } else {
@@ -106,13 +105,12 @@ function startStarfield() {
 
   function draw(dt = 0) {
     if (!width || !height) return;
-    const still = reduced.matches;
+    const still = reduced.matches || Boolean(scene?.frozen);
     context.clearRect(0, 0, width, height);
-    const warp = still || entranceAt === null ? 0 : Math.max(0, 1 - (elapsed - entranceAt) / 0.95) ** 2 * 0.85;
-    const speed = Math.max(boost, warp);
+    const speed = still ? 0 : Math.max(boost, scene?.speed ?? 0);
     const count = width < 700 ? 85 : stars.length;
     for (let index = 0; index < count; index++) drawStar(stars[index], dt, still, speed);
-    if (!still) drawComet();
+    if (!reduced.matches) drawComet();
   }
 
   function resize() {
@@ -128,7 +126,9 @@ function startStarfield() {
   function animate(time) {
     const dt = lastFrame ? Math.min((time - lastFrame) / 1000, 0.05) : 0;
     lastFrame = time;
-    if (dt > 0) {
+    scene = homeEntranceFrame(time);
+    const frozen = Boolean(scene?.frozen);
+    if (dt > 0 && !frozen) {
       const speed = (window.scrollY - lastScroll) / dt;
       const target = Math.min(Math.abs(speed) / 1100, 1);
       const rate = target > boost ? 15 : 4.8;
@@ -137,8 +137,11 @@ function startStarfield() {
       elapsed += dt;
     }
     lastScroll = window.scrollY;
-    draw(dt);
-    window.dispatchEvent(new CustomEvent('jospat-space-frame', {detail:{dt, boost, bank}}));
+    draw(frozen ? 0 : dt);
+    if (!frozen) {
+      const planetBoost = Math.max(boost, (scene?.speed ?? 0) * 0.36);
+      window.dispatchEvent(new CustomEvent('jospat-space-frame', {detail:{dt, boost:planetBoost, bank}}));
+    }
     frame = requestAnimationFrame(animate);
   }
 
@@ -157,4 +160,5 @@ function startStarfield() {
   document.addEventListener('visibilitychange', updateMotion);
   resize();
   updateMotion();
+  return true;
 }
