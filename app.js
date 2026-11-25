@@ -12,6 +12,7 @@ let editorOptions = {};
 let state = { habits: [], tasks: [], events: [], notes: [], journal: {}, maps: [], goals: [] };
 let activeNoteId = null;
 let noteQuery = '';
+let mountPlanet;
 
 function key(date) {
   return [date.getFullYear(), String(date.getMonth()+1).padStart(2,'0'), String(date.getDate()).padStart(2,'0')].join('-');
@@ -157,6 +158,7 @@ function render() {
   $('view').querySelector('.mind-node-input')?.blur();
   const horizontal = $('orbit-scroll')?.scrollLeft;
   $('view').innerHTML = views[screen]();
+  mountPlanet?.($('planet-anchor'));
   if (horizontal !== undefined && $('orbit-scroll')) $('orbit-scroll').scrollLeft = horizontal;
   document.title = $('title').textContent + ' · JOSPAT';
 }
@@ -352,3 +354,8 @@ startCloseDay();
 startBackup();
 startMindPan();
 if (location.hash === '#sections') requestAnimationFrame(focusSections);
+
+if (typeof createPlanet === 'function') {
+  mountPlanet = createPlanet();
+  mountPlanet?.($('planet-anchor'));
+}
