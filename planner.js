@@ -102,9 +102,46 @@ function movePlannerTask(id, parentId, selectedDay = key(plannerDate)) {
   feedback(parent ? 'Перенесено в подзадачи' : 'Задача перенесена');
 }
 
+function copyTodayPlan() {
+  const now = new Date();
+  const today = key(now);
+  if (key(plannerDate) !== today) return;
+  const tomorrow = shift(now, 1);
+  const date = key(tomorrow);
+  const tomorrowTasks = state.tasks.filter(task => task.date === date);
+  const existingCopies = new Map(tomorrowTasks.filter(task => task.copiedFromTaskId)
+    .map(task => [task.copiedFromTaskId, task]));
+  const sourceTasks = state.tasks.filter(task => task.date === today && !existingCopies.has(task.id));
+  const copyIds = new Map(sourceTasks.map(task => [task.id, crypto.randomUUID()]));
+  const keepFeatured = !tomorrowTasks.some(task => task.featured);
+  const copies = sourceTasks.map(task => {
+    const existingParent = existingCopies.get(task.parentId);
+    return {
+      ...task,
+      id:copyIds.get(task.id),
+      copiedFromTaskId:task.id,
+      parentId:existingParent ? existingParent.parentId || existingParent.id : copyIds.get(task.parentId),
+      date,
+      done:false,
+      doneLate:false,
+      featured:keepFeatured && Boolean(task.featured)
+    };
+  });
+  if (copies.length) {
+    const tasks = [...state.tasks, ...copies];
+    if (!save({...state, tasks})) return;
+    state.tasks = tasks;
+  }
+  plannerDate = tomorrow;
+  render();
+  $('view').querySelector(`[data-plan-jump="${date}"]`)?.focus();
+  feedback(copies.length ? `Скопировано на завтра: ${copies.length}` : 'Задачи уже скопированы на завтра');
+}
+
 function plannerScreen() {
   const date = key(plannerDate);
-  const todayKey = key(new Date());
+  const now = new Date();
+  const todayKey = key(now);
   const tasks = state.tasks.filter(task => task.date === date);
   const parents = new Set(tasks.filter(task => !task.parentId).map(task => task.id));
   const roots = sortedTasks(tasks.filter(task => !parents.has(task.parentId)));
@@ -116,12 +153,15 @@ function plannerScreen() {
       <div class="plan-days" aria-label="Выбрать день"><button type="button" data-plan-move="-1" aria-label="Предыдущий день">‹</button><button type="button" data-plan-today>Сегодня</button><button type="button" data-plan-move="1" aria-label="Следующий день">›</button><input type="date" id="planner-date" value="${date}" min="1000-01-01" max="9999-12-31" aria-label="Дата плана"></div>
     </div>
     <div class="plan-tabs" aria-label="Ближайшие дни">${[0,1,2].map(offset => {
-      const day = shift(new Date(), offset);
+      const day = shift(now, offset);
       return `<button type="button" data-plan-jump="${key(day)}" aria-pressed="${date === key(day)}">${plannerDayLabel(day)}</button>`;
     }).join('')}</div>
     <div class="plan-list-head"><span>${completed} из ${tasks.length} выполнено</span><label>Порядок <select id="task-order" aria-label="Сортировка задач">${[['priority','По важности'],['added','По добавлению'],['name','По названию']].map(([value,label]) => `<option value="${value}" ${taskOrder === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label></div>
     ${roots.length ? `<ul class="plan-list">${roots.map(task => plannerTask(task, sortedTasks(tasks.filter(child => child.parentId === task.id)))).join('')}</ul>` : '<p class="plan-empty">На этот день задач пока нет.</p>'}
-    ${taskDraft === "root" ? taskComposer(date) : '<button type="button" class="primary" data-quick-start>＋ Задача</button>'}
+    ${taskDraft === 'root' ? taskComposer(date) : `<div class="plan-actions">
+      <button type="button" class="primary" data-quick-start>＋ Задача</button>
+      ${date === todayKey && tasks.length && !taskDraft && !taskEditId ? '<button type="button" data-copy-today-plan>Копировать на завтра</button>' : ''}
+    </div>`}
   </section>
   ${overdue.length ? `<section class="panel daily-plan overdue-panel"><div class="plan-top"><div><h2>Просроченные</h2><p>Срок этих задач уже прошёл</p></div><span>${overdue.filter(task => !task.done).length}</span></div><ul class="plan-list">${overdue.map(task => plannerTask(task, [], true)).join('')}</ul></section>` : ''}`;
 }
@@ -132,6 +172,7 @@ function tasksWithFeatured(task, featured, tasks = state.tasks) {
 
 function plannerClick(button) {
   const {taskName, taskMenu, taskDrag} = button.dataset;
+  if (button.hasAttribute('data-copy-today-plan')) { copyTodayPlan(); return true; }
   if (button.hasAttribute('data-quick-start')) { openQuickTask(); return true; }
   if (button.hasAttribute('data-task-cancel')) { calendarTaskDraft = taskDraft = taskEditId = ''; render(); return true; }
   if (taskName) {
