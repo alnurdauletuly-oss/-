@@ -398,7 +398,9 @@
 .row-menu button { text-align: left; padding: 8px 10px; overflow-wrap: anywhere; }
 .fire-icon, .victory-fire { display: inline-block; transform-origin: 50% 85%; }
 .fire-new .fire-icon { animation: habit-ignite .65s ease-out both; }
-.victory-fire { font-size: 2.7rem; filter: drop-shadow(0 0 10px #ff7b38a8); animation: victory-glow 1.65s ease-in-out infinite alternate; }
+.victory-count { align-items: center; }
+.victory-count .victory-fire, .victory-count strong { font-size: 48px; line-height: 1.1; }
+.victory-count .victory-fire { filter: drop-shadow(0 0 10px #ff7b38a8); animation: victory-glow 1.65s ease-in-out infinite alternate; }
 @keyframes habit-ignite { 0% { opacity: .4; transform: scale(.65); } 45% { transform: scale(1.45) rotate(-9deg); filter: drop-shadow(0 0 10px #ffad38); } 100% { transform: scale(1); } }
 @keyframes victory-glow { from { transform: rotate(-4deg) scale(.96); } to { transform: rotate(3deg) scale(1.08); filter: drop-shadow(0 0 17px #ff7b38b8); } }
 .level-card, .victory-panel { background: radial-gradient(ellipse at top left, #202825, transparent 70%), var(--panel); }

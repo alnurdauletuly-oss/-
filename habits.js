@@ -62,7 +62,7 @@ function habitSummary(habit, days) {
 }
 
 function habitRow({habit, color, percent, streak}, dates) {
-  const completed = dates.map(date => date <= today && habit.done.includes(key(date)));
+  const completed = dates.map(date => habit.done.includes(key(date)));
   const cells = dates.map((date, index) => {
     const day = key(date);
     const checked = completed[index];
@@ -71,7 +71,7 @@ function habitRow({habit, color, percent, streak}, dates) {
     const classes = [checked && completed[index - 1] && 'join-left', checked && completed[index + 1] && 'join-right'];
     if (lastHabitMark?.id === habit.id && lastHabitMark.date === day) classes.push('just-marked');
     return `<td class="habit-day ${classes.filter(Boolean).join(' ')}"><label class="habit-orbit">
-      <input type="checkbox" data-habit="${safe(habit.id)}" data-date="${day}" aria-label="${safe(habit.name)}, ${short(date)}" ${checked ? 'checked' : ''} ${day > key(today) ? 'disabled' : ''}>
+      <input type="checkbox" data-habit="${safe(habit.id)}" data-date="${day}" aria-label="${safe(habit.name)}, ${short(date)}" ${checked ? 'checked' : ''}>
       <span aria-hidden="true"></span>
     </label></td>`;
   }).join('');
@@ -130,7 +130,7 @@ function mobileHabits(dates, rows) {
     const title = `<span class="mobile-habit-title"><strong>${name}</strong>${habit.description ? `<small>${safe(habit.description)}</small>` : ''}${paused ? '<small class="habit-paused">На паузе</small>' : ''}</span>`;
     return `<li class="mobile-habit" data-habit-row="${id}" style="--habit-color:${color}">
       ${paused ? `<div class="mobile-habit-mark"><span aria-hidden="true" class="habit-paused">Ⅱ</span>${title}</div>` :
-        `<label class="mobile-habit-mark"><input class="check" type="checkbox" data-habit="${id}" data-date="${selected}" ${checked ? 'checked' : ''} ${selected > current ? 'disabled' : ''}>${title}</label>`}
+        `<label class="mobile-habit-mark"><input class="check" type="checkbox" data-habit="${id}" data-date="${selected}" ${checked ? 'checked' : ''}>${title}</label>`}
       <div class="mobile-habit-actions">
         ${habitFire(habit, streak)}${habitHandle(habit)}
         ${selected === current && !checked ? `<button type="button" data-habit-pause="${id}" aria-label="${paused ? 'Возобновить' : 'Пауза на сегодня'} — ${name}">${paused ? 'Возобновить' : 'Пауза'}</button>` : ''}
