@@ -410,7 +410,18 @@
 .level-card progress { height: 8px; accent-color: var(--lime); }
 .goal-target-line { stroke: var(--muted); opacity: .75; stroke-dasharray: 4 5; }
 
-.plan-task-row .task-text { text-align: left; flex: 1 1 9rem; overflow-wrap: anywhere; }
+.plan-task-row .task-text { text-align: left; flex: 1 1 9rem; overflow-wrap: anywhere; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.plan-task-row.drop-before { box-shadow: inset 0 2px var(--lime); }
+.plan-task-row.drop-after { box-shadow: inset 0 -2px var(--lime); }
+.plan-task-row.drop-on { background: var(--accent-wash); }
+.task-drag-source { opacity: .45; }
+.task-drag-preview {
+  position: fixed; top: 0; left: 0; z-index: 30; pointer-events: none;
+  margin-top: 16px; margin-left: 8px; max-width: min(250px, 55vw);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 8px 12px; border: 1px solid var(--lime); border-radius: 9px;
+  background: var(--panel); color: var(--text); box-shadow: 0 8px 24px #0009;
+}
 .task-text small { display: block; color: var(--muted); }
 .task-done .task-name { color: var(--muted); text-decoration: line-through; }
 .quick-task { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 0; }

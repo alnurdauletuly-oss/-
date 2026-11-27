@@ -1,5 +1,5 @@
 let plannerDate = new Date();
-let taskOrder = 'priority';
+const taskOrders = [['priority','По важности'], ['added','По добавлению'], ['name','По названию'], ['manual','Вручную']];
 const taskPriorities = ['Обычный', 'Важный', 'Срочный'];
 
 function dayDistance(from, to) {
@@ -12,7 +12,9 @@ function plannerDayLabel(date) {
 }
 
 function sortedTasks(tasks) {
+  const taskOrder = state.taskOrder;
   return [...tasks].sort((a, b) => {
+    if (taskOrder === 'manual') return (a.manualOrder ?? Number.MAX_SAFE_INTEGER) - (b.manualOrder ?? Number.MAX_SAFE_INTEGER);
     if (taskOrder === 'name') return a.name.localeCompare(b.name, 'ru');
     if (taskOrder === 'added') return 0;
     return Number(Boolean(b.featured)) - Number(Boolean(a.featured)) || (b.priority || 0) - (a.priority || 0);
@@ -38,10 +40,10 @@ function plannerTask(task, children = [], overdue = false) {
   const urgency = age >= 7 ? 'red' : age >= 3 ? 'yellow' : 'green';
   const priority = Number(task.priority) || 0;
   return `<li class="plan-task ${task.done ? 'task-done' : ''} ${overdue ? `is-late late-${urgency}` : ''}">
-    <div class="plan-task-row" ${!task.parentId && !overdue ? `data-task-drop="${id}"` : ''}>
+    <div class="plan-task-row" ${!overdue ? `data-task-drop="${id}" ${!task.parentId ? 'data-task-parent' : ''}` : ''}>
       <input class="check" aria-label="Выполнено: ${name}" type="checkbox" data-task="${id}" ${task.done ? 'checked' : ''}>
       ${taskEditId === task.id ? `<form class="quick-task task-inline-edit" data-quick-edit="${id}">
-        <input name="name" value="${name}" maxlength="120" required aria-label="Изменить название задачи">
+        <input name="name" value="${name}" maxlength="120" aria-label="Изменить название задачи" placeholder="Пустое название удалит задачу">
         <button type="submit">Готово</button><button type="button" data-task-cancel aria-label="Отменить">×</button></form>` :
         `<button class="task-text" type="button" data-task-name="${id}">${task.time ? `<time class="task-time">${safe(task.time)}</time>` : ''}<span class="task-name">${name}</span>${task.project ? `<small>${safe(task.project)}</small>` : ''}</button>`}
       ${priority ? `<span class="task-priority priority-${priority}">${taskPriorities[priority]}</span>` : ''}
@@ -67,13 +69,14 @@ function plannerSubmit(event) {
   if (!form.dataset.quickTask && !form.dataset.quickEdit) return;
   event.preventDefault();
   const name = form.elements.name.value.trim();
-  if (!name) return;
   if (form.dataset.quickEdit) {
     const task = state.tasks.find(item => item.id === form.dataset.quickEdit);
     if (!task) return;
+    if (!name) { deletePlannerTask(task.id); return; }
     task.name = name;
     taskEditId = '';
   } else {
+    if (!name) return;
     const parent = state.tasks.find(item => item.id === form.dataset.parentId);
     if (form.dataset.parentId && !parent) return;
     state.tasks.push({id:crypto.randomUUID(), name, date:parent?.date || form.dataset.quickTask, done:false,
@@ -85,21 +88,49 @@ function plannerSubmit(event) {
   feedback(form.dataset.quickEdit ? 'Задача обновлена' : 'Задача добавлена');
 }
 
-function movePlannerTask(id, parentId, selectedDay = key(plannerDate)) {
+function deletePlannerTask(id) {
+  const tasks = state.tasks.filter(task => task.id !== id)
+    .map(task => task.parentId === id ? {...task, parentId:undefined, manualOrder:undefined} : task);
+  if (!save({...state, tasks})) return;
+  state.tasks = tasks;
+  taskEditId = '';
+  if (taskDraft === id) taskDraft = '';
+  render();
+  feedback('Задача удалена');
+}
+
+function movePlannerTask(id, parentId, selectedDay = key(plannerDate), placement) {
   const task = state.tasks.find(item => item.id === id);
   const parent = state.tasks.find(item => item.id === parentId);
   if (!task || (parentId && (!parent || parent.id === id || parent.parentId))) return;
-  const children = state.tasks.filter(item => item.parentId === id);
   const date = parent?.date || selectedDay;
+  const sameGroup = task.date === date && (task.parentId || '') === (parentId || '');
+  if (sameGroup && !placement) return;
+  const children = state.tasks.filter(item => item.parentId === id);
+  let positions = null;
+  if (placement) {
+    const siblings = sortedTasks(state.tasks.filter(item => item.date === date &&
+      (item.parentId || '') === (parentId || '') && item !== task && !children.includes(item)));
+    const index = siblings.findIndex(item => item.id === placement.id);
+    if (index < 0) return;
+    siblings.splice(index + Number(placement.after), 0, task);
+    positions = new Map(siblings.map((item, order) => [item.id, order]));
+  }
   const updated = state.tasks.map(item => {
-    if (item === task) return {...item, date, parentId:parent?.id, featured:false, doneLate:false};
-    if (children.includes(item)) return {...item, date, parentId:parent?.id || id, featured:false, doneLate:false};
+    if (item === task) return {...item, date, parentId:parent?.id,
+      featured:sameGroup ? item.featured : false, doneLate:date === item.date ? item.doneLate : false,
+      manualOrder:positions?.get(id)};
+    if (children.includes(item) && !sameGroup) return {...item, date, parentId:parent?.id || id,
+      featured:false, doneLate:date === item.date ? item.doneLate : false,
+      manualOrder:parent ? undefined : item.manualOrder};
+    if (positions?.has(item.id)) return {...item, manualOrder:positions.get(item.id)};
     return item;
   });
-  if (!save({...state, tasks:updated})) return;
-  state.tasks = updated;
+  const taskOrder = placement ? 'manual' : state.taskOrder;
+  if (!save({...state, tasks:updated, taskOrder})) return;
+  Object.assign(state, {tasks:updated, taskOrder});
   render();
-  feedback(parent ? 'Перенесено в подзадачи' : 'Задача перенесена');
+  feedback(sameGroup ? 'Порядок задач изменён' : parent ? 'Перенесено в подзадачи' : 'Задача перенесена');
 }
 
 function copyTodayPlan() {
@@ -156,7 +187,7 @@ function plannerScreen() {
       const day = shift(now, offset);
       return `<button type="button" data-plan-jump="${key(day)}" aria-pressed="${date === key(day)}">${plannerDayLabel(day)}</button>`;
     }).join('')}</div>
-    <div class="plan-list-head"><span>${completed} из ${tasks.length} выполнено</span><label>Порядок <select id="task-order" aria-label="Сортировка задач">${[['priority','По важности'],['added','По добавлению'],['name','По названию']].map(([value,label]) => `<option value="${value}" ${taskOrder === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label></div>
+    <div class="plan-list-head"><span>${completed} из ${tasks.length} выполнено</span><label>Порядок <select id="task-order" aria-label="Сортировка задач">${taskOrders.map(([value,label]) => `<option value="${value}" ${(state.taskOrder || 'priority') === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label></div>
     ${roots.length ? `<ul class="plan-list">${roots.map(task => plannerTask(task, sortedTasks(tasks.filter(child => child.parentId === task.id)))).join('')}</ul>` : '<p class="plan-empty">На этот день задач пока нет.</p>'}
     ${taskDraft === 'root' ? taskComposer(date) : `<div class="plan-actions">
       <button type="button" class="primary" data-quick-start>＋ Задача</button>
@@ -193,13 +224,7 @@ function plannerClick(button) {
       ...state.tasks.filter(task => !task.parentId && task.id !== item.id && task.date === key(plannerDate))
         .map(task => [`В подзадачи · ${task.name}`, () => movePlannerTask(item.id, task.id)]),
       ['Удалить', () => {
-        if (!confirm(`Удалить задачу «${item.name}»?`)) return;
-        const tasks = state.tasks.filter(task => task.id !== item.id)
-          .map(task => task.parentId === item.id ? {...task, parentId:undefined} : task);
-        if (!save({...state, tasks})) return;
-        state.tasks = tasks;
-        render();
-        feedback('Задача удалена');
+        if (confirm(`Удалить задачу «${item.name}»?`)) deletePlannerTask(item.id);
       }]
     ];
     showActionMenu(button, actions);
@@ -233,7 +258,13 @@ function plannerChange(field) {
     plannerDate = new Date(`${field.value}T12:00:00`);
     taskDraft = taskEditId = '';
   }
-  else if (field.id === 'task-order') taskOrder = field.value;
+  else if (field.id === 'task-order') {
+    if (!save({...state, taskOrder:field.value})) {
+      field.value = state.taskOrder || 'priority';
+      return true;
+    }
+    state.taskOrder = field.value;
+  }
   else return false;
   render();
   $(field.id)?.focus({preventScroll:true});
