@@ -476,6 +476,61 @@
 .goal-add-step > label:has([name="milestone"]) { display: flex; align-items: center; white-space: nowrap; gap: 4px; }
 .goal-add-step > label [name="milestone"] { width: auto; }
 .goal-card button[data-goal-cancel], .goal-add-step button:not([aria-label]) { font-size: .875rem; }
+.goal-history-panel { align-self: start; }
+.goal-step-main { display: flex; align-items: center; gap: 10px; flex: 1 1 9rem; min-width: 0; }
+.goal-step-main .check { margin: 0; }
+.goal-step .goal-step-name, .goal-next-action .goal-step-name {
+  min-width: 0; padding: 5px 4px; border: 0; color: var(--text);
+  background: transparent; font: inherit; text-align: left; overflow-wrap: anywhere;
+}
+.goal-step-name:hover { background: var(--accent-wash); color: var(--lime); }
+.goal-step-edit input {
+  flex: 1 1 10rem; min-width: 0; padding: 8px; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--field); color: var(--text);
+}
+.goal-step-edit button { font-size: .875rem; color: var(--text); }
+.goal-next-action { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; padding: 8px; background: var(--field); border-radius: 8px; }
+.goal-next-action > div { flex: 1 1 11rem; min-width: 0; }
+.goal-next-action small { display: block; color: var(--muted); padding-inline-start: 4px; }
+.goal-stage-line { display: flex; flex-wrap: wrap; gap: 6px 10px; list-style: none; padding: 0; margin: 4px 0; }
+.goal-stage-line li { border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; font-size: .8125rem; }
+.goal-stage-line li.done { background: var(--accent-wash); color: var(--lime); }
+.goal-stage-line li.next { border-color: #6a853e; }
+.goal-pace, .goal-habit-card, .goal-week-review, .goal-review-history { display: grid; gap: 7px; margin-top: 12px; overflow-wrap: anywhere; }
+.goal-pace { border-top: 1px solid var(--line); padding-top: 8px; font-size: .875rem; }
+.goal-pace p, .goal-habit-card label, .goal-review-history summary { color: var(--muted); }
+.goal-pace-status, .goal-habit-card strong, .goal-habit-card a { color: var(--lime); }
+.goal-pace-status.behind { color: #ffcf75; }
+.goal-habit-card select, .goal-week-review :is(input, select, textarea) {
+  display: block; width: 100%; margin-top: 4px; min-width: 0; color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px; background: var(--field); padding: 8px; font: inherit;
+}
+.goal-week-review { border-top: 1px solid var(--line); padding-top: 10px; }
+.goal-week-review summary, .goal-review-history summary { cursor: pointer; }
+.goal-week-review form { display: grid; gap: 8px; margin-top: 8px; }
+.goal-week-review ul { padding-inline-start: 18px; }
+.goal-week-review textarea { resize: vertical; }
+.goal-week-review button { justify-self: start; }
+.goal-review-history p { margin: 6px 0; white-space: pre-wrap; }
+.goal-fields .goal-template-field, .goal-template-steps { grid-column: 1 / -1; }
+.goal-template-steps { display: grid; gap: 5px; }
+.journal-analytics { margin-top: 18px; }
+.journal-analytics-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+.journal-analytics-head h2 { margin-bottom: 2px; }
+.journal-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; }
+.journal-chart { padding: 13px; min-width: 0; }
+.journal-chart-head { display: flex; flex-wrap: wrap; gap: 7px; align-items: baseline; justify-content: space-between; }
+.journal-chart-head strong { color: var(--chart-color); font-size: .875rem; }
+.journal-chart > p { margin-top: 10px; }
+.journal-chart svg { width: 100%; height: auto; display: block; margin-top: 6px; }
+.journal-chart svg line { stroke: var(--line); }
+.journal-chart svg text { font-size: 12px; fill: var(--muted); }
+.journal-chart svg path { stroke: var(--chart-color); stroke-width: 2; stroke-linejoin: round; }
+.journal-chart-point { fill: var(--chart-color); stroke: var(--panel); stroke-width: 1.2; }
+@media (max-width: 700px) {
+  .goal-step-main { flex-basis: 100%; }
+  .goal-step .goal-step-name, .goal-next-action button, .goal-week-review button { min-height: 44px; }
+}
 .calendar-detail > .quick-task { padding: 10px 18px; }
 /* Notes workspace */
 .note-tools {

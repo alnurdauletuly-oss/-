@@ -49,6 +49,9 @@ function parseBackup(text) {
       optionalText(goal.criterion) && optionalText(goal.unit) &&
       optional(goal.mode, mode => Object.hasOwn(goalModes, mode)) &&
       (goal.mode === 'number' ? Number.isFinite(goal.target) : optional(goal.target, Number.isFinite)) &&
+      optionalText(goal.habitId) && optionalDate(goal.startDate) && optional(goal.startValue, Number.isFinite) &&
+      optional(goal.reviews, items => list(items, review => object(review) && date(review.week) &&
+        string(review.reflection) && string(review.next) && optionalText(review.stepId))) &&
       optional(goal.measurements, items => records(items, item => date(item.date) && Number.isFinite(item.value))) &&
       records(goal.steps, step => string(step.text) && typeof step.done === 'boolean' && optionalDate(step.date) &&
         optionalDate(step.doneAt) && optional(step.milestone, value => typeof value === 'boolean'))) ||

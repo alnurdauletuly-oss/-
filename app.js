@@ -338,7 +338,12 @@ $('view').addEventListener('change',e=>{
   if(e.target.id==='journal-date'&&e.target.value){journalDate=new Date(e.target.value+'T12:00:00');render();}
   if(e.target.id==='mind-map-select')mindChooseMap(e.target.value);
 });
-$('view').addEventListener('keydown',e=>mindKeydown(e));
+$('view').addEventListener('keydown',e=>{
+  if (e.key === 'Escape' && e.target.closest('[data-goal-step-edit]')) {
+    e.preventDefault();
+    e.target.closest('[data-goal-step-edit]').querySelector('[data-goal-cancel]').click();
+  } else mindKeydown(e);
+});
 $('view').addEventListener('dblclick',e=>{if(e.target.closest('[data-mind-node]'))mindEdit();});
 $('view').addEventListener('submit', goalsSubmit);
 $('view').addEventListener('submit', plannerSubmit);
