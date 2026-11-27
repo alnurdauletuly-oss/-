@@ -60,6 +60,7 @@ function todayScreen() {
   const daily = dailyProductivity(now);
   const habits = state.habits.filter(habit => habitScheduled(habit, now) || habitPaused(habit, date));
   const task = state.tasks.find(item => item.date === date && item.featured);
+  const focusTime = task && focusTaskTime(task.id);
   const event = state.events
     .filter(item => new Date(`${item.date}T${item.time}`) >= now)
     .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))[0];
@@ -93,6 +94,8 @@ function todayScreen() {
         <div class="today-card-head"><h2>Главная задача</h2><a href="#tasks" data-today-planner>Задачи</a></div>
         ${task ? `<label class="today-check"><input class="check" type="checkbox" data-task="${safe(task.id)}" ${task.done ? 'checked' : ''}><span>${safe(task.name)}</span></label>` :
           '<p>Отметь задачу звёздочкой, и она появится здесь.</p>'}
+        <div class="today-focus-tools">${focusButton(task?.done ? null : task)}
+          ${task ? `<small data-focus-task-time="${safe(task.id)}" ${focusTime ? '' : 'hidden'}>${focusTime}</small>` : ''}</div>
       </article>
       <article class="today-card" id="today-habits">
         <div class="today-card-head"><h2>Привычки сегодня</h2><a href="#habits">Трекер</a></div>
@@ -108,7 +111,7 @@ function todayScreen() {
     </div>
     ${shownSteps.map(({goal, step}) => `<div class="today-goal"><p><strong>${step.date === date ? 'Шаг на сегодня' : 'Следующий шаг к цели'}</strong> <span>${safe(goal.title)}</span></p><label class="today-check today-step">${goalStepCheckbox(goal, step)}<span>${safe(step.text)}</span></label><a href="#goals">Цели</a></div>`).join('')}
     <div class="today-actions"><button class="primary" type="button" data-close-day>${entry.closedAt ? 'Итог дня · Изменить' : 'Закрыть день'}</button><a href="#journal">Открыть дневник</a></div>
-  </section>`;
+  </section>${constellationScreen()}`;
 }
 
 function startCloseDay() {

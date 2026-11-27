@@ -17,6 +17,7 @@ function parseBackup(text) {
   const optional = (value, check) => value === undefined || check(value);
   const optionalDate = value => optional(value, item => item === '' || date(item));
   const optionalText = value => optional(value, string);
+  const integer = (value,min,max) => Number.isInteger(value) && value >= min && value <= max;
   const list = (items, check) => Array.isArray(items) && items.every(check);
   const record = value => object(value) && string(value.id) && value.id !== '';
   const records = (items, check) => list(items, item => record(item) && check(item)) &&
@@ -34,6 +35,13 @@ function parseBackup(text) {
   };
 
   if (!object(data) ||
+    !optional(data.focusOptions, options => object(options) && integer(options.work,1,180) &&
+      integer(options.rest,1,60) && integer(options.volume,0,100) && ['quiet','rain','noise','ambient'].includes(options.sound)) ||
+    !optional(data.focusSessions, items => records(items, item => string(item.taskId) && string(item.taskName) &&
+      integer(item.minutes,1,180) && string(item.date) && Number.isFinite(Date.parse(item.date)))) ||
+    !optional(data.avoidanceTracks, tracks => records(tracks, track => string(track.name) && date(track.start) &&
+      integer(track.target,1,3650) && object(track.entries) && Object.entries(track.entries).every(([day,mark]) =>
+        date(day) && day >= track.start && ['kept','off'].includes(mark)))) ||
     !records(data.habits, habit => string(habit.name) &&
       list(habit.days, day => Number.isInteger(day) && day >= 0 && day < 7) &&
       list(habit.done, date) && optional(habit.paused, days => list(days, date)) &&
@@ -60,6 +68,7 @@ function parseBackup(text) {
       optional(entry.sleep, value => value === '' || (typeof value === 'number' && value >= 0 && value <= 24)) &&
       optional(entry.energy, value => Number.isInteger(value) && value >= 0 && value <= 5))) return null;
 
+  delete data.focusRun;
   return {data, noteFiles:object(file.noteFiles) ? file.noteFiles : {}};
 }
 
@@ -86,6 +95,7 @@ function startBackup() {
     try {
       const now = new Date();
       const data = structuredClone(state);
+      delete data.focusRun;
       const noteFiles = await exportNoteFiles(data.notes);
       const file = new Blob([JSON.stringify({format:backupFormat, version:backupVersion, createdAt:now.toISOString(), data, noteFiles}, null, 2)], {type:'application/json'});
       const url = URL.createObjectURL(file);
@@ -139,6 +149,9 @@ function startBackup() {
         return;
       }
       state = data;
+      focusMessage = '';
+      syncFocusSound();
+      updateFocusPanel();
       activeNoteId = null;
       activeMapId = null;
       selectedMindNodeId = null;

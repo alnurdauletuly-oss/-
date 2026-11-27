@@ -643,3 +643,82 @@
 @keyframes arrival-sweep { from { opacity: 0; transform: translateY(.22em); background-position: 110% center; } to { opacity: 1; transform: translateY(0); background-position: -10% center; } }
 @keyframes arrival-copy { from { opacity: 0; transform: translateY(.32em); filter: blur(3px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
 @keyframes arrival-fade { from { opacity: 0; } to { opacity: 1; } }
+
+#focus-dialog { width: min(430px, calc(100vw - 24px)); }
+#focus-task-detail { text-align: center; color: var(--muted); overflow-wrap: anywhere; }
+.focus-clock { font: clamp(3.1rem, 15vw, 5.2rem)/1.1 var(--display-font); color: var(--lime); text-align: center; font-variant-numeric: tabular-nums; margin: 8px 0 14px; }
+.focus-lengths, .focus-sound-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; align-items: end; }
+#focus-dialog :is(select,input[type=number]) { display: block; margin-top: 3px; }
+#focus-volume { display: block; width: 100%; min-height: 40px; padding: 0; accent-color: var(--lime); }
+#focus-status { font-size: .875rem; color: var(--muted); }
+.focus-controls { display: flex; gap: 8px; margin-top: 12px; }
+.focus-controls button { min-height: 44px; }
+#focus-form .focus-controls .primary { margin: 0; flex: 1; }
+.focus-badge {
+  position: fixed; z-index: 10; bottom: 16px; right: 16px; min-height: 44px;
+  background: var(--side); color: var(--lime); border-color: #596b36; box-shadow: 0 5px 20px #0007;
+  font-variant-numeric: tabular-nums;
+}
+.today-focus-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.today-focus-tools small, .task-text [data-focus-task-time] { color: var(--muted); }
+.plan-task-row .focus-launch { font-size: .8125rem; color: var(--lime); padding-inline: 6px; }
+.constellation-panel, .avoidance-panel { margin-top: 16px; padding: clamp(13px, 3vw, 22px); }
+.constellation-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px 14px; justify-content: space-between; }
+.constellation-sky {
+  position: relative; height: clamp(165px, 24vw, 260px); overflow: hidden; margin-block: 10px;
+  border-radius: 12px; border: 1px solid var(--line);
+  background: radial-gradient(ellipse at 29% 74%,#1d293c 0,transparent 53%), radial-gradient(ellipse at 72% 29%,#232826 0,transparent 52%), #0b1016;
+}
+.constellation-sky[aria-hidden=true] { height: 75px; }
+.progress-star {
+  display: grid; place-items: center; position: absolute; left: var(--star-x); top: var(--star-y);
+  transform: translate(-50%,-50%); width: 44px; height: 44px; padding: 0;
+  border: 1px solid transparent; border-radius: 50%; background: transparent; color: #a9d4ff;
+}
+.progress-star.stage { color: var(--lime); }
+.progress-star span { font-size: 1.25rem; text-shadow: 0 0 12px currentColor; }
+.progress-star[aria-pressed=true] { background: #ffffff12; border-color: currentColor; }
+.constellation-detail { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; overflow-wrap: anywhere; }
+.constellation-detail :is(p,time) { color: var(--muted); font-size: .875rem; }
+.constellation-pages { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.constellation-pages button { min-height: 44px; }
+.avoidance-panel { scroll-margin-top: 15px; }
+.avoidance-panel > p, .avoidance-create { margin-top: 6px; }
+.avoidance-create summary { cursor: pointer; color: var(--lime); padding: 8px 0; }
+.avoidance-form { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; }
+.avoidance-form label { flex: 1 1 8rem; min-width: 0; margin: 0; }
+.avoidance-form input, .avoidance-date input { display: block; width: 100%; margin-top: 4px; }
+.avoidance-form .primary { width: auto; margin: 0; }
+.avoidance-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%, 325px),1fr)); gap: 10px; margin-top: 10px; }
+.avoidance-card { padding: 12px; background: var(--field); border: 1px solid var(--line); border-radius: 12px; }
+.avoidance-head, .avoidance-marks { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.avoidance-head h3 { flex: 1 1 11rem; overflow-wrap: anywhere; }
+.avoidance-head button { min-height: 40px; font-size: .8125rem; }
+.avoidance-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin: 10px 0; }
+.avoidance-stats p { font-size: .875rem; }
+.avoidance-stats small { display: block; color: var(--muted); }
+.avoidance-ring {
+  width: 92px; height: 92px; flex: none; border-radius: 50%; padding: 4px;
+  background: conic-gradient(var(--lime) var(--series-progress),var(--line) 0);
+}
+.avoidance-ring > div { display: grid; place-content: center; text-align: center; height: 100%; border-radius: 50%; background: var(--field); }
+.avoidance-ring strong { font-size: 1.65rem; color: var(--lime); line-height: 1.1; }
+.avoidance-days { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 3px; margin: 8px 0; }
+.avoidance-days button { display: grid; place-items: center; padding: 4px 1px; min-width: 0; min-height: 44px; font-size: .8125rem; }
+.avoidance-days .kept { color: var(--lime); }
+.avoidance-days .off { color: #ffcf75; }
+.avoidance-days [aria-pressed=true], .avoidance-marks [aria-pressed=true] { border-color: var(--lime); background: var(--accent-wash); }
+.avoidance-date { display: block; width: fit-content; color: var(--muted); font-size: .8125rem; }
+.avoidance-date input { color: var(--text); background: var(--side); border: 1px solid var(--line); border-radius: 6px; padding: 6px; }
+.avoidance-marks { margin-top: 8px; }
+.avoidance-marks button { min-height: 42px; font-size: .8125rem; }
+@media(max-width:700px) {
+  .focus-badge { bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 6px); right: 8px; }
+  .avoidance-head button, .avoidance-marks button, .today-focus-tools button { min-height: 44px; }
+  .constellation-sky {
+    display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); grid-auto-rows: 44px;
+    align-content: center; justify-items: center; height: auto; min-height: 165px; padding: 5px;
+  }
+  .constellation-sky[aria-hidden=true] { min-height: 75px; }
+  .progress-star { position: static; transform: none; }
+}

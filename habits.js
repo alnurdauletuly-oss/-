@@ -155,6 +155,7 @@ function habitsScreen() {
   const metric = (label, row) => `<article class="panel orbit-stat"><span>${label}</span><strong>${row ? row.percent+'%' : '—'}</strong>${row ? `<p style="--habit-color:${row.color}">${safe(row.habit.name)}</p>` : ''}</article>`;
   return `<section class="panel orbit-panel">
     <div class="orbit-tools"><div class="orbit-range" aria-label="Период">${[['week','Неделя'],['month','Месяц']].map(([range,label]) => `<button type="button" data-habit-range="${range}" aria-pressed="${habitRange === range}">${label}</button>`).join('')}</div>
+      <button type="button" data-go-avoidance>Дни без привычки</button>
     </div>
     ${rows.length ? mobileHabits(dates, rows) : ''}
     ${rows.length ? `<div class="orbit-scroll" id="orbit-scroll"><table class="orbit-table" aria-label="Отметки привычек по дням">
@@ -169,7 +170,7 @@ function habitsScreen() {
     ${metric('Требует внимания', measured.length > 1 ? measured.at(-1) : null)}
     <article class="panel orbit-stat"><span>Среднее по привычкам</span><strong>${average === null ? '—' : average+'%'}</strong><p>${measured.length} в расчёте</p></article>
     <article class="panel orbit-stat level-card"><span>Общий уровень</span><strong>${String(level).padStart(2, "0")}</strong><p>${marks} отметок · ${10 - marks % 10} до следующего</p><progress aria-label="Отметки до следующего уровня" value="${marks % 10}" max="10"></progress></article>
-  </div>${victorySeries(dates)}${lineChart(dates)}`;
+  </div>${victorySeries(dates)}${lineChart(dates)}${avoidanceScreen()}`;
 }
 
 function habitsClick(button) {

@@ -39,13 +39,15 @@ function plannerTask(task, children = [], overdue = false) {
   const age = dayDistance(task.date, key(new Date()));
   const urgency = age >= 7 ? 'red' : age >= 3 ? 'yellow' : 'green';
   const priority = Number(task.priority) || 0;
+  const focusTime = focusTaskTime(task.id);
   return `<li class="plan-task ${task.done ? 'task-done' : ''} ${overdue ? `is-late late-${urgency}` : ''}">
     <div class="plan-task-row" ${!overdue ? `data-task-drop="${id}" ${!task.parentId ? 'data-task-parent' : ''}` : ''}>
       <input class="check" aria-label="Выполнено: ${name}" type="checkbox" data-task="${id}" ${task.done ? 'checked' : ''}>
       ${taskEditId === task.id ? `<form class="quick-task task-inline-edit" data-quick-edit="${id}">
         <input name="name" value="${name}" maxlength="120" aria-label="Изменить название задачи" placeholder="Пустое название удалит задачу">
         <button type="submit">Готово</button><button type="button" data-task-cancel aria-label="Отменить">×</button></form>` :
-        `<button class="task-text" type="button" data-task-name="${id}">${task.time ? `<time class="task-time">${safe(task.time)}</time>` : ''}<span class="task-name">${name}</span>${task.project ? `<small>${safe(task.project)}</small>` : ''}</button>`}
+        `<button class="task-text" type="button" data-task-name="${id}">${task.time ? `<time class="task-time">${safe(task.time)}</time>` : ''}<span class="task-name">${name}</span>${task.project ? `<small>${safe(task.project)}</small>` : ''}<small data-focus-task-time="${id}" ${focusTime ? '' : 'hidden'}>${focusTime}</small></button>`}
+      ${task.done ? '' : focusButton(task)}
       ${priority ? `<span class="task-priority priority-${priority}">${taskPriorities[priority]}</span>` : ''}
       ${overdue ? `<small class="late-label">${task.done ? 'Выполнено' : age + ' дн. просрочки'}</small><button type="button" class="reorder-handle" data-task-drag="${id}" aria-label="Перенести ${name}">⠿</button>` : ''}
       <button class="task-star" type="button" data-task-feature="${id}" aria-pressed="${Boolean(task.featured)}" aria-label="Главная задача дня: ${name}">${task.featured ? '★' : '☆'}</button>
@@ -190,7 +192,7 @@ function plannerScreen() {
     <div class="plan-list-head"><span>${completed} из ${tasks.length} выполнено</span><label>Порядок <select id="task-order" aria-label="Сортировка задач">${taskOrders.map(([value,label]) => `<option value="${value}" ${(state.taskOrder || 'priority') === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label></div>
     ${roots.length ? `<ul class="plan-list">${roots.map(task => plannerTask(task, sortedTasks(tasks.filter(child => child.parentId === task.id)))).join('')}</ul>` : '<p class="plan-empty">На этот день задач пока нет.</p>'}
     ${taskDraft === 'root' ? taskComposer(date) : `<div class="plan-actions">
-      <button type="button" class="primary" data-quick-start>＋ Задача</button>
+      <button type="button" class="primary" data-quick-start>＋ Задача</button>${focusButton()}
       ${date === todayKey && tasks.length && !taskDraft && !taskEditId ? '<button type="button" data-copy-today-plan>Копировать на завтра</button>' : ''}
     </div>`}
   </section>

@@ -290,6 +290,15 @@ $('view').onclick=e=>{
   if (e.target.closest('[data-today-planner]')) plannerDate = new Date();
   const button=e.target.closest('button');
   if(!button)return;
+  if (button.hasAttribute('data-open-focus')) { openFocus(button.dataset.openFocus); return; }
+  if (button.hasAttribute('data-go-avoidance')) {
+    $('avoidance').querySelector('summary').focus({preventScroll:true});
+    $('avoidance').scrollIntoView({block:'start'});
+    return;
+  }
+  if (button.dataset.progressStar) { selectProgressStar(button); return; }
+  if (button.dataset.starPage) { changeConstellationPage(button.dataset.starPage); return; }
+  if (avoidanceClick(button)) return;
   if(habitsClick(button) || plannerClick(button)) return;
   if(journalClick(button))return;
   if(mindClick(button))return;
@@ -335,6 +344,7 @@ $('view').addEventListener('input',e=>{
   }
 });
 $('view').addEventListener('change',e=>{
+  changeAvoidanceDate(e.target);
   if(e.target.id==='journal-date'&&e.target.value){journalDate=new Date(e.target.value+'T12:00:00');render();}
   if(e.target.id==='mind-map-select')mindChooseMap(e.target.value);
 });
@@ -347,6 +357,7 @@ $('view').addEventListener('keydown',e=>{
 $('view').addEventListener('dblclick',e=>{if(e.target.closest('[data-mind-node]'))mindEdit();});
 $('view').addEventListener('submit', goalsSubmit);
 $('view').addEventListener('submit', plannerSubmit);
+$('view').addEventListener('submit', submitAvoidance);
 $('view').onchange=e=>{
   const box=e.target;
   if (goalsChange(box) || plannerChange(box)) return;
@@ -399,6 +410,7 @@ function focusSections() {
 const spaceReady = startStarfield();
 render();
 startWorkspaceInteractions();
+startFocus();
 startNoteTools();
 startHomeEntrance(spaceReady);
 startTodayQuoteClock();
