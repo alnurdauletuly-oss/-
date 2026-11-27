@@ -187,6 +187,7 @@ function render() {
   const horizontal = $('orbit-scroll')?.scrollLeft;
   $('view').innerHTML = views[screen]();
   updateFocusPanel();
+  updateFocusAmbience();
   void mountNoteEditor();
   mountPlanet?.($('planet-anchor'));
   if (horizontal !== undefined && $('orbit-scroll')) $('orbit-scroll').scrollLeft = horizontal;
@@ -410,6 +411,7 @@ const spaceReady = startStarfield();
 render();
 startWorkspaceInteractions();
 startFocus();
+startFocusAmbience();
 startNoteTools();
 startHomeEntrance(spaceReady);
 startTodayQuoteClock();

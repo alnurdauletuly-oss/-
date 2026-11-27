@@ -1,18 +1,10 @@
-const focusDefaults = {work:25, rest:5, sound:'quiet', volume:35};
-const focusSoundChoices = {rain:'Дождь', quiet:'Тишина', space:'Космос'};
+const focusDefaults = {work:25, rest:5, sound:'rain', volume:35};
 let focusPhase = 'work';
 let focusMessage = '';
-let focusAudio;
-let focusSoundSource;
-let focusSoundGain;
-let focusSoundRequest;
-let focusRainBuffer;
-let focusSpaceBuffer;
 
 function focusOptions() {
   const options = {...focusDefaults,...state.focusOptions};
-  if (options.sound === 'ambient') options.sound = 'space';
-  if (!Object.hasOwn(focusSoundChoices,options.sound)) options.sound = 'quiet';
+  options.sound = normalizeFocusSound(options.sound);
   return options;
 }
 
@@ -54,16 +46,8 @@ function focusScreen(taskId) {
         </div>
         <p id="focus-status" role="status"></p>
       </div>
-      <div class="focus-sound-options">
-        <div class="focus-sounds" role="group" aria-label="Фоновый звук">
-          ${Object.entries(focusSoundChoices).map(([value,label])=>`<button type="button" data-focus-sound="${value}">${label}</button>`).join('')}
-        </div>
-        <label class="focus-volume"><span aria-hidden="true">♪</span>
-          <input id="focus-volume" type="range" min="0" max="100" value="${options.volume}" aria-label="Громкость фона">
-        </label>
-      </div>
     </form>
-  </section>${constellationScreen()}`;
+  </section>${focusAmbienceScreen()}${constellationScreen()}`;
 }
 
 function focusTaskTime(taskId) {
@@ -110,7 +94,6 @@ function focusTick() {
     focusPhase = 'work';
     setFocusStatus('Перерыв завершён.');
   }
-  syncFocusSound();
   updateFocusPanel();
   feedback(focusMessage);
 }
@@ -171,96 +154,10 @@ function updateFocusPanel() {
     button.setAttribute('aria-pressed',button.dataset.focusPhase === phase);
     button.disabled = Boolean(run);
   }
-  for (const button of form.querySelectorAll('[data-focus-sound]')) {
-    button.setAttribute('aria-pressed',button.dataset.focusSound === options.sound);
-  }
   const settings = form.querySelector('.focus-settings');
   settings.hidden = Boolean(run);
   if (run) settings.open = false;
   $('focus-length-label').textContent = `${options.work} / ${options.rest} мин`;
-  $('focus-volume').value = options.volume;
-  $('focus-volume').disabled = options.sound === 'quiet';
-}
-
-function setFocusVolume(value) {
-  if (focusSoundGain) focusSoundGain.gain.setTargetAtTime(value / 100 * .8,focusAudio.currentTime,.05);
-}
-
-function makeSpaceSound(context) {
-  const rate = 22050;
-  const buffer = context.createBuffer(2,rate * 28,rate);
-  const notes = [42,49,54,61,64].map(note=>440 * 2 ** ((note - 69) / 12));
-  for (let side = 0; side < 2; side++) {
-    const channel = buffer.getChannelData(side);
-    for (let index = 0; index < channel.length; index++) {
-      const position = index / channel.length * 2 * Math.PI;
-      for (const [note, frequency] of notes.entries()) {
-        const phase = position * Math.round(frequency * 28);
-        const swell = .62 + .38 * Math.cos(position * (1 + note % 2) + note + side * .6);
-        channel[index] += (Math.sin(phase + .7 * Math.sin(position + side)) +
-          .13 * Math.sin(2 * phase)) * swell * (.095 / (1 + note * .24));
-      }
-    }
-  }
-  return buffer;
-}
-
-async function getRainSound() {
-  focusRainBuffer ??= (async () => {
-    const response = await fetch('audio/focus-rain.mp3');
-    if (!response.ok) throw new Error('Rain recording unavailable');
-    return focusAudio.decodeAudioData(await response.arrayBuffer());
-  })();
-  try { return await focusRainBuffer; }
-  catch (error) { focusRainBuffer = null; throw error; }
-}
-
-async function syncFocusSound(gesture = false) {
-  const run = state.focusRun;
-  const options = focusOptions();
-  const desired = run?.endsAt ? options.sound : 'quiet';
-  if (gesture && desired !== 'quiet') {
-    try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      focusAudio ??= new AudioContext();
-      await focusAudio.resume();
-    } catch {
-      setFocusStatus('Фоновый звук недоступен в этом браузере.');
-      return;
-    }
-    if (!state.focusRun?.endsAt || focusOptions().sound !== desired) return;
-  }
-  if (focusSoundRequest?.kind !== desired) {
-    focusSoundRequest = null;
-    if (focusSoundSource) {
-      focusSoundSource.stop();
-      focusSoundSource.disconnect();
-      focusSoundGain.disconnect();
-      focusSoundSource = null;
-      focusSoundGain = null;
-    }
-    if (desired !== 'quiet' && focusAudio?.state === 'running') {
-      const request = {kind:desired};
-      focusSoundRequest = request;
-      try {
-        const buffer = desired === 'rain' ? await getRainSound() : focusSpaceBuffer ??= makeSpaceSound(focusAudio);
-        if (focusSoundRequest !== request) return;
-        focusSoundSource = focusAudio.createBufferSource();
-        focusSoundGain = focusAudio.createGain();
-        focusSoundSource.buffer = buffer;
-        focusSoundSource.loop = true;
-        focusSoundGain.gain.value = 0;
-        focusSoundSource.connect(focusSoundGain).connect(focusAudio.destination);
-        focusSoundSource.start();
-      } catch {
-        if (focusSoundRequest === request) {
-          focusSoundRequest = null;
-          setFocusStatus(`Не удалось включить фон «${focusSoundChoices[desired]}».`);
-        }
-      }
-    }
-  }
-  setFocusVolume(focusOptions().volume);
 }
 
 function submitFocus(event) {
@@ -283,7 +180,6 @@ function submitFocus(event) {
   if (!saveFocus({focusRun:next,focusOptions:{...focusOptions(),work:next.work,rest:next.rest}})) return;
   setFocusStatus('');
   updateFocusPanel();
-  void syncFocusSound(true);
 }
 
 function handleFocusClick(event) {
@@ -297,14 +193,8 @@ function handleFocusClick(event) {
     if (!saveFocus({focusRun:null})) return;
     focusPhase = 'work';
     setFocusStatus('Таймер сброшен.');
-    void syncFocusSound();
     updateFocusPanel();
     $('focus-start').focus({preventScroll:true});
-  } else if (button.dataset.focusSound) {
-    setFocusStatus('');
-    if (!saveFocus({focusOptions:{...focusOptions(),sound:button.dataset.focusSound}})) return;
-    updateFocusPanel();
-    void syncFocusSound(true);
   }
 }
 
@@ -315,13 +205,10 @@ function startFocus() {
   view.addEventListener('input',event=>{
     const field = event.target;
     if (field.id === 'focus-work' || field.id === 'focus-rest') showFocusClock();
-    if (field.id === 'focus-volume') setFocusVolume(field.valueAsNumber);
   });
   view.addEventListener('change',event=>{
     const field = event.target;
-    if (field.id === 'focus-volume') {
-      if (saveFocus({focusOptions:{...focusOptions(),volume:field.valueAsNumber}})) void syncFocusSound(true);
-    } else if ((field.id === 'focus-work' || field.id === 'focus-rest') && field.validity.valid) {
+    if ((field.id === 'focus-work' || field.id === 'focus-rest') && field.validity.valid) {
       const option = field.id === 'focus-work' ? 'work' : 'rest';
       if (saveFocus({focusOptions:{...focusOptions(),[option]:field.valueAsNumber}})) {
         const {work,rest} = focusOptions();
@@ -341,8 +228,8 @@ function startFocus() {
     const taskIds = new Set([state.focusRun?.taskId,focusRun?.taskId]);
     Object.assign(state,{focusRun,focusSessions,focusOptions});
     for (const id of taskIds) refreshFocusProgress(id);
-    void syncFocusSound();
     updateFocusPanel();
+    syncFocusAmbienceSettings();
   });
   document.addEventListener('visibilitychange',focusTick);
   window.addEventListener('pageshow',focusTick);
