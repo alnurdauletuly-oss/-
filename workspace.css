@@ -786,39 +786,96 @@ main:has(.focus-panel) > header h1 { font-family: system-ui, sans-serif; font-we
 .constellation-panel, .avoidance-panel { margin-top: 16px; padding: clamp(13px, 3vw, 22px); }
 .constellation-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px 14px; justify-content: space-between; }
 .constellation-sky {
-  position: relative; height: clamp(165px, 24vw, 260px); overflow: hidden; margin-block: 10px;
-  border-radius: 12px; border: 1px solid var(--line);
-  background: radial-gradient(ellipse at 29% 74%,#1d293c 0,transparent 53%), radial-gradient(ellipse at 72% 29%,#232826 0,transparent 52%), #0b1016;
+  position: relative; isolation: isolate; height: clamp(190px, 28vw, 315px);
+  overflow: hidden; margin-block: 10px; border-radius: 12px; border: 1px solid #354454;
+  background:
+    radial-gradient(ellipse at 48% 52%, #3654778c 0, transparent 50%),
+    radial-gradient(ellipse at 78% 25%, #35564e69 0, transparent 45%),
+    radial-gradient(ellipse at 20% 85%, #382c635a 0, transparent 50%),
+    #0a121d;
+}
+.constellation-sky::before, .constellation-sky::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: -1;
 }
 .constellation-sky::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background-image: radial-gradient(circle at 21% 26%, #a2b6d94d 0 1px, transparent 1.8px),
-    radial-gradient(circle at 62% 60%, #bed2ed60 0 1px, transparent 1.8px),
-    radial-gradient(circle at 87% 19%, #c9e0d64d 0 1px, transparent 1.8px);
-  background-size: 117px 74px, 163px 112px, 181px 92px;
+  background-image: radial-gradient(circle at 21% 26%, #b1dbfa78 0 1px, transparent 1.8px),
+    radial-gradient(circle at 60% 60%, #b2bafd80 0 1px, transparent 1.8px),
+    radial-gradient(circle at 81% 19%, #cfebdd65 0 1px, transparent 1.8px);
+  background-size: 103px 89px, 173px 117px, 181px 92px;
 }
-.constellation-sky[aria-hidden=true] { height: 120px; }
+.constellation-sky::after {
+  inset: -39% 15%;
+  border: 1px solid #acd3ff14; border-radius: 50%;
+  transform: rotate(-12deg);
+  box-shadow: 0 0 0 24px #c4ddff06, 0 0 0 55px #c4ddff05, 0 0 0 87px #c4ddff04;
+  mask-image: linear-gradient(102deg, transparent, #000 35% 70%, transparent);
+}
+.constellation-sky[aria-hidden=true] { height: 142px; }
+.constellation-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.constellation-links path {
+  fill: none; stroke: #9bc5ee78; stroke-width: 1; vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+}
 .progress-star {
   display: grid; place-items: center; position: absolute; left: var(--star-x); top: var(--star-y);
   transform: translate(-50%,-50%); width: 44px; height: 44px; padding: 0;
-  border: 1px solid transparent; border-radius: 50%; background: transparent; color: #a9d4ff;
+  border: 1px solid transparent; border-radius: 50%; color: #b4deff; background: transparent;
 }
 .progress-star.stage { color: var(--lime); }
-.progress-star span { font-size: 1.25rem; text-shadow: 0 0 12px currentColor; }
-.progress-star[aria-pressed=true] { background: #ffffff12; border-color: currentColor; }
-@media(prefers-reduced-motion: no-preference) {
-  .constellation-sky::before { animation: starfield-glow 7s ease-in-out infinite; }
-  .progress-star[aria-pressed=true] span { animation: star-glow 3.8s ease-in-out infinite; }
-  .progress-star.just-earned span { animation: star-appear .95s ease-out, star-glow 3.8s .95s ease-in-out infinite; }
+.progress-star span {
+  display: block; font-size: 1.3rem; text-shadow: 0 0 8px currentColor, 0 0 22px currentColor;
 }
-@keyframes star-appear {
-  from { transform: scale(.35); opacity: .3; }
-  55% { transform: scale(1.55); text-shadow: 0 0 22px currentColor; }
-  to { transform: scale(1); opacity: 1; }
+.progress-star[aria-pressed=true] {
+  z-index: 1; background: #9dcfff13; border-color: color-mix(in srgb, currentColor 64%, transparent);
+  box-shadow: 0 0 22px #94cbff26;
+}
+.progress-star.stage[aria-pressed=true] { background: #bbf02915; box-shadow: 0 0 22px #bbf02923; }
+@media (prefers-reduced-motion: no-preference) {
+  .constellation-sky::before { animation: starfield-glow 8s ease-in-out infinite; }
+  .progress-star[aria-pressed=true] span { animation: star-glow 4s ease-in-out infinite; }
+  .progress-star.awaiting-reveal span { opacity: .28; animation: none; }
+  .progress-star.just-earned span { animation: star-birth 1.4s ease-out both, star-glow 4s 1.4s ease-in-out infinite; }
+  .progress-star:is(.just-earned,.star-selected)::before {
+    content: ""; position: absolute; inset: 10px; pointer-events: none;
+    border: 1px solid currentColor; border-radius: 50%;
+    animation: star-ripple 1.2s ease-out both;
+  }
+  .progress-star.just-earned::before { animation-delay: .54s; }
+  .progress-star.just-earned::after {
+    content: ""; position: absolute; top: 22px; right: 22px; pointer-events: none;
+    width: 82px; height: 2px; border-radius: 50%;
+    background: linear-gradient(90deg, transparent, currentColor 85%, #fff);
+    box-shadow: 0 0 10px #b6ddff9c; transform-origin: right center;
+    animation: star-comet .76s ease-in both;
+  }
+  .constellation-links .awaiting-starlight { opacity: 0; }
+  .constellation-links .trace-starlight {
+    stroke-dasharray: 1; animation: star-link .95s .56s ease-out both;
+  }
+}
+@keyframes star-birth {
+  0% { transform: scale(.25); opacity: .25; }
+  36% { transform: scale(.25); opacity: .25; }
+  56% { transform: scale(1.8); opacity: 1; text-shadow: 0 0 20px currentColor, 0 0 36px currentColor; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes star-comet {
+  0% { transform: translate(-120px,-56px) rotate(25deg) scaleX(.6); opacity: 0; }
+  22% { opacity: .85; }
+  83% { transform: translate(0,0) rotate(25deg) scaleX(.75); opacity: 1; }
+  100% { transform: translate(2px,1px) rotate(25deg) scaleX(.04); opacity: 0; }
+}
+@keyframes star-ripple {
+  from { transform: scale(.5); opacity: .85; }
+  to { transform: scale(3.1); opacity: 0; }
+}
+@keyframes star-link {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
 }
 @keyframes starfield-glow { 50% { opacity: .55; } }
 @keyframes star-glow {
-  50% { transform: scale(1.18); text-shadow: 0 0 21px currentColor; }
+  50% { transform: scale(1.13); text-shadow: 0 0 14px currentColor, 0 0 24px currentColor; }
 }
 .constellation-detail { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; overflow-wrap: anywhere; }
 .constellation-detail :is(p,time) { color: var(--muted); font-size: .875rem; }
@@ -868,6 +925,7 @@ main:has(.focus-panel) > header h1 { font-family: system-ui, sans-serif; font-we
     display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); grid-auto-rows: 44px;
     align-content: center; justify-items: center; height: auto; min-height: 165px; padding: 5px;
   }
-  .constellation-sky[aria-hidden=true] { min-height: 75px; }
-  .progress-star { position: static; transform: none; }
+  .constellation-sky[aria-hidden=true] { min-height: 100px; }
+  .constellation-links { display: none; }
+  .progress-star { position: relative; inset: auto; transform: none; }
 }

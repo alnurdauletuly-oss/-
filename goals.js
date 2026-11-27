@@ -437,6 +437,7 @@ function goalsChange(target) {
     if (step.done) feedback('Шаг выполнен');
   }
   if (!save()) return true;
+  if (!goalSchedule && step.done && goalMode(goal) === 'stages' && milestone(step)) queueProgressStar(`stage-${goal.id}-${step.id}`);
   render();
   const attr = goalSchedule ? 'data-goal-schedule' : 'data-goal-step';
   $('view').querySelector(`[${attr}][data-step-id="${CSS.escape(stepId)}"]`)?.focus({preventScroll:true});

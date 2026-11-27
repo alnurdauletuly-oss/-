@@ -39,7 +39,7 @@ function focusAmbienceScreen() {
   return `<section class="panel ambience-panel" aria-labelledby="ambience-title">
     <h2 id="ambience-title">Фоновые звуки</h2>
     <div class="ambience-scene">
-      <img id="ambience-art" alt="" width="418" height="418">
+      <img id="ambience-art" alt="" width="3840" height="2160" loading="lazy" decoding="async" sizes="(max-width: 1100px) 92vw, 1024px">
       <div class="ambience-now">
         <p id="ambience-track-title"></p>
         <p id="ambience-track-scene"></p>
@@ -65,8 +65,12 @@ function updateFocusAmbience() {
   if (!scene) return;
   const options = focusOptions();
   const sound = findFocusSound(options.sound);
-  const art = focusArt(sound);
-  if (scene.getAttribute('src') !== art) scene.src = art;
+  if (scene.dataset.sound !== sound.id) {
+    scene.dataset.sound = sound.id;
+    const scenePath = `audio/scenes/${sound.id}`;
+    scene.srcset = `${scenePath}-1280.webp 1280w, ${scenePath}-3840.webp 3840w`;
+    scene.src = `${scenePath}-1280.webp`;
+  }
   $('ambience-track-title').textContent = sound.title;
   $('ambience-track-scene').textContent = sound.scene;
   const busy = focusPlayback === 'loading';

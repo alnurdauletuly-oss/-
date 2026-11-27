@@ -188,6 +188,7 @@ function render() {
   $('view').innerHTML = views[screen]();
   updateFocusPanel();
   updateFocusAmbience();
+  observeProgressStar();
   void mountNoteEditor();
   mountPlanet?.($('planet-anchor'));
   if (horizontal !== undefined && $('orbit-scroll')) $('orbit-scroll').scrollLeft = horizontal;

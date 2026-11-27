@@ -200,11 +200,15 @@ function mindEdit(record = true) {
     input.remove();
   }, {once:true});
   input.addEventListener('keydown', event => {
-    if (event.isComposing || !['Enter', 'Escape'].includes(event.key)) return;
+    if (event.isComposing) return;
+    const addChild = event.key === 'Tab' && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
+    if (!addChild && event.key !== 'Enter' && event.key !== 'Escape') return;
     event.preventDefault();
+    if (addChild && event.repeat) return;
     cancelled = event.key === 'Escape';
     input.blur();
-    mindRefocus();
+    if (addChild) mindAction('child');
+    else mindRefocus();
   });
   input.focus();
   input.select();

@@ -107,12 +107,8 @@ function refreshFocusProgress(taskId, sessionId) {
       element.hidden = !total;
     }
   }
-  if (sessionId) {
-    selectedStarId = `focus-${sessionId}`;
-    constellationPage = 0;
-  }
-  const section = $('constellation');
-  if (section) section.outerHTML = constellationScreen(sessionId ? selectedStarId : '');
+  if (sessionId) queueProgressStar(`focus-${sessionId}`);
+  updateConstellation();
 }
 
 function showFocusClock() {
