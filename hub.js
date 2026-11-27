@@ -6,11 +6,13 @@ const modules = [
   { id: 'goals', title: 'Цели', subtitle: 'Держи важное в фокусе', description: 'Соедини большую цель с конкретными шагами.', color: 'rose', art: 'goal' },
   { id: 'journal', title: 'Дневник', subtitle: 'Пойми свой день', description: 'Сон, настроение, энергия и мысли — в одной записи.', color: 'peach', art: 'journal' },
   { id: 'mind', title: 'Карта мыслей', subtitle: 'Идеи по веткам', description: 'Преврати идею в понятные ветки и следующие шаги.', color: 'lavender', art: 'mind' },
+  { id: 'focus', title: 'Фокус', description: 'Таймер работы и перерывов, фоновые звуки и созвездие прогресса.', color: 'mint', art: 'focus' },
   { id: 'calendar', title: 'Календарь', description: 'Важные события, задачи и шаги к целям по датам.', color: 'mint', art: 'calendar' }
 ];
 
 function illustration(type) {
   const pictures = {
+    focus: '<div class="focus-card-art"><span>25:00</span></div>',
     checks: '<div class="mini-tracker"><div class="mini-title">Мои привычки <span>ПН · ВС</span></div>' +
       ['Чтение', 'Движение', 'Новые знания'].map((name,row) =>
         '<div class="mini-row"><span>'+name+'</span>'+Array.from({length:5},(_,i)=>'<i class="'+(i<4-row?'filled':'')+'">'+(i<4-row?'✓':'')+'</i>').join('')+'</div>').join('')+'</div>',

@@ -19,7 +19,7 @@ function progressStars() {
   return [...sessions,...stages].sort((a,b)=>b.day.localeCompare(a.day) || b.date.localeCompare(a.date));
 }
 
-function constellationScreen() {
+function constellationScreen(earnedId = '') {
   const stars = progressStars();
   const pageSize = constellationPositions.length;
   const lastPage = Math.max(0,Math.ceil(stars.length / pageSize) - 1);
@@ -29,11 +29,11 @@ function constellationScreen() {
   const selected = visible.find(star=>star.id === selectedStarId) || visible[0];
   const plot = visible.map((star,index)=>{
     const [left,top] = constellationPositions[index];
-    return `<button type="button" class="progress-star ${star.kind}" style="--star-x:${left}%;--star-y:${top}%"
+    return `<button type="button" class="progress-star ${star.kind}${star.id === earnedId ? ' just-earned' : ''}" style="--star-x:${left}%;--star-y:${top}%"
       data-progress-star="${safe(star.id)}" aria-pressed="${star === selected}" aria-label="${safe(star.name + ' · ' + star.detail)}"><span aria-hidden="true">✦</span></button>`;
   }).join('');
   return `<section class="panel constellation-panel" id="constellation" aria-labelledby="constellation-title">
-    <div class="constellation-head"><h2 id="constellation-title">Созвездие прогресса</h2>
+    <div class="constellation-head"><div><h2 id="constellation-title">Созвездие прогресса</h2><p class="muted">Маленькие шаги каждый день</p></div>
       ${stars.length ? `<span class="muted">Всего звёзд · ${stars.length}</span>` : ''}</div>
     <div class="constellation-sky" ${visible.length ? 'role="group" aria-label="Звёзды за последние достижения"' : 'aria-hidden="true"'}>${plot}</div>
     ${selected ? `<div class="constellation-detail" aria-live="polite"><div><strong>${safe(selected.name)}</strong><p>${safe(selected.detail)}</p></div>

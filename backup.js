@@ -36,7 +36,7 @@ function parseBackup(text) {
 
   if (!object(data) ||
     !optional(data.focusOptions, options => object(options) && integer(options.work,1,180) &&
-      integer(options.rest,1,60) && integer(options.volume,0,100) && ['quiet','rain','noise','ambient'].includes(options.sound)) ||
+      integer(options.rest,1,60) && integer(options.volume,0,100) && ['quiet','rain','space','noise','ambient'].includes(options.sound)) ||
     !optional(data.focusSessions, items => records(items, item => string(item.taskId) && string(item.taskName) &&
       integer(item.minutes,1,180) && string(item.date) && Number.isFinite(Date.parse(item.date)))) ||
     !optional(data.avoidanceTracks, tracks => records(tracks, track => string(track.name) && date(track.start) &&

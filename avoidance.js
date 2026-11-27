@@ -43,10 +43,12 @@ function avoidanceCard(track) {
     <div class="avoidance-head"><h3>${safe(track.name)}</h3><button type="button" data-avoidance-edit="${id}">Изменить</button>
       <button type="button" data-avoidance-delete="${id}" aria-label="Удалить: ${safe(track.name)}">×</button></div>
     <div class="avoidance-stats"><div class="avoidance-ring" style="--series-progress:${progress}%" aria-label="Текущая серия ${ongoing} из ${track.target} дней">
-      <div><strong>${ongoing}</strong><small>из ${track.target} дн.</small></div></div>
-      <div><p>Текущая серия</p><p class="muted">Рекорд · ${record} дн.</p>
-        <p>${recent} из ${periodDays} дней по плану <small>за последние 30 дней</small></p>
-        <p class="muted">Всего дней по плану · ${total}</p></div></div>
+      <div><small>Серия</small><strong>${ongoing}</strong><small>из ${track.target} дн.</small></div></div>
+      <dl class="avoidance-totals">
+        <div><dt>Лучшая серия</dt><dd>${record} дн.</dd></div>
+        <div><dt>За 30 дней</dt><dd>${recent} из ${periodDays}</dd></div>
+        <div><dt>Всего дней без привычки</dt><dd>${total}</dd></div>
+      </dl></div>
     <div class="avoidance-days" role="group" aria-label="Отметки за семь дней">${days.map(date=>{
       const dayKey = key(date);
       const value = track.entries[dayKey];
@@ -64,8 +66,8 @@ function avoidanceCard(track) {
 function avoidanceScreen() {
   const tracks = state.avoidanceTracks || [];
   return `<section class="panel avoidance-panel" id="avoidance" aria-labelledby="avoidance-title">
-    <h2 id="avoidance-title">Дни без привычки</h2>
-    <p class="muted">Отмечай дни по плану. Если серия прервётся, прошлые отметки сохранятся.</p>
+    <h2 id="avoidance-title">Дни без вредных привычек</h2>
+    <p class="muted">Отмечай дни без привычки и следи за своей серией.</p>
     <details class="avoidance-create"><summary>＋ Новый отсчёт</summary>${avoidanceForm()}</details>
     ${tracks.length ? `<div class="avoidance-grid">${tracks.map(avoidanceCard).join('')}</div>` : ''}
   </section>`;

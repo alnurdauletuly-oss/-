@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#05080A"><title>JOSPAT · Моё пространство</title>
-  <link rel="stylesheet" href="style.css?v=notes-1"><link rel="stylesheet" href="theme.css?v=planet-rotate3d"><link rel="stylesheet" href="workspace.css?v=focus-progress"><script defer src="hub.js?v=workspace-update"></script><script defer src="journal.js?v=goals-journal"></script><script defer src="mind.js?v=mobile"></script><script defer src="goals.js?v=goals-journal"></script><script defer src="today.js?v=focus-progress"></script><script defer src="habits.js?v=focus-progress"></script><script defer src="planner.js?v=focus-progress"></script><script defer src="space.js?v=arrival-ramp"></script><script defer src="backup.js?v=focus-progress"></script><script defer src="planet.js?v=arrival-ramp"></script><script defer src="interactions.js?v=notes-1"></script><script defer src="note-files.js?v=notes-1"></script><script defer src="notes.js?v=notes-1"></script><script defer src="focus.js?v=focus-progress"></script><script defer src="constellation.js?v=focus-progress"></script><script defer src="avoidance.js?v=focus-progress"></script><script defer src="app.js?v=focus-progress"></script>
+  <link rel="stylesheet" href="style.css?v=notes-1"><link rel="stylesheet" href="theme.css?v=planet-rotate3d"><link rel="stylesheet" href="workspace.css?v=focus-room"><script defer src="hub.js?v=focus-room"></script><script defer src="journal.js?v=goals-journal"></script><script defer src="mind.js?v=mobile"></script><script defer src="goals.js?v=goals-journal"></script><script defer src="today.js?v=focus-room"></script><script defer src="habits.js?v=focus-room"></script><script defer src="planner.js?v=focus-room"></script><script defer src="space.js?v=arrival-ramp"></script><script defer src="backup.js?v=focus-room"></script><script defer src="planet.js?v=arrival-ramp"></script><script defer src="interactions.js?v=notes-1"></script><script defer src="note-files.js?v=notes-1"></script><script defer src="notes.js?v=notes-1"></script><script defer src="focus.js?v=focus-room"></script><script defer src="constellation.js?v=focus-room"></script><script defer src="avoidance.js?v=focus-room"></script><script defer src="app.js?v=focus-room"></script>
 </head>
 <body>
   <div class="site-nav">
     <a class="brand" href="#home" aria-label="JOSPAT — все разделы">jospat<span>.</span></a>
-    <nav class="site-links" aria-label="Навигация"><a href="#tasks">Задачи</a><a href="#calendar">Календарь</a><a href="#goals">Цели</a><a href="#sections">Все разделы</a></nav>
+    <nav class="site-links" aria-label="Навигация"><a href="#tasks">Задачи</a><a href="#calendar">Календарь</a><a href="#goals">Цели</a><a href="#sections">Все разделы</a><a class="site-focus" href="#focus">Фокус</a></nav>
     <div class="identity"><span class="avatar">А</span><span>Алинур</span><button type="button" id="open-backup" title="Резервная копия" aria-label="Резервная копия"><span aria-hidden="true">↓</span> Копия</button></div>
   </div>
   <nav class="mobile-nav" aria-label="Основные разделы">
@@ -64,26 +64,6 @@
     <input type="file" id="backup-file" accept=".json,application/json">
     <p id="backup-status" role="status"></p>
     <button type="button" id="backup-restore" class="primary" hidden>Заменить данные этой копией</button>
-  </dialog>
-  <dialog id="focus-dialog" aria-labelledby="focus-phase">
-    <form id="focus-form">
-      <div class="dialog-head"><h2 id="focus-phase">Фокус</h2><button type="button" id="focus-close" aria-label="Свернуть таймер">×</button></div>
-      <p id="focus-task-detail" hidden></p>
-      <p id="focus-clock" class="focus-clock" role="timer">25:00</p>
-      <div id="focus-setup">
-        <label>Задача<select id="focus-task"></select></label>
-        <div class="focus-lengths">
-          <label>Работа, мин<input id="focus-work" type="number" min="1" max="180" value="25" inputmode="numeric" required></label>
-          <label>Перерыв, мин<input id="focus-rest" type="number" min="1" max="60" value="5" inputmode="numeric" required></label>
-        </div>
-      </div>
-      <div class="focus-sound-options">
-        <label>Фон<select id="focus-sound"><option value="quiet">Тишина</option><option value="rain">Дождь</option><option value="noise">Мягкий шум</option><option value="ambient">Спокойная музыка</option></select></label>
-        <label>Громкость<input id="focus-volume" type="range" min="0" max="100" value="35"></label>
-      </div>
-      <p id="focus-status" role="status"></p>
-      <div class="focus-controls"><button type="submit" class="primary" id="focus-start">Начать фокус</button><button type="button" id="focus-reset" hidden>Сбросить</button></div>
-    </form>
   </dialog>
   <button type="button" id="focus-badge" class="focus-badge" hidden></button>
   <div id="workspace-feedback" class="workspace-feedback" role="status" aria-live="polite"></div>

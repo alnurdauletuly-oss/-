@@ -147,11 +147,14 @@ function render() {
   screen = Object.hasOwn(screens, route) || module ? route : 'home';
   const isCore = Object.hasOwn(screens, screen);
   const isHome = screen === 'home';
+  const isAvoidance = screen === 'habits' && params.get('view') === 'avoidance';
   if (screen !== 'mind') mindEntrance = true;
   document.body.classList.toggle('home-page', isHome);
   document.body.classList.toggle('notes-page', screen==='notes');
   document.body.classList.toggle('note-editing', screen==='notes' && !!activeNoteId);
   $('back').hidden=isHome;
+  $('back').href = screen === 'focus' ? '#sections' : '#home';
+  $('back').textContent = screen === 'focus' ? '← Все разделы' : '← Сегодня';
   const current = route === 'sections' ? 'sections' : screen;
   document.querySelectorAll('.site-links a, .mobile-nav a').forEach(link => {
     if (link.hash === '#' + current) link.setAttribute('aria-current', 'page');
@@ -160,8 +163,8 @@ function render() {
   $('title').closest('header').hidden = isHome;
   $('today').hidden=isHome;
   $('title').textContent = isHome ? 'Сегодня' : screens[screen] || module.title;
-  $('primary').hidden = !isCore && screen!=='notes' && screen!=='tasks';
-  document.querySelector('.toolbar').hidden = !isCore && (screen !== 'analytics' || params.has('goal'));
+  $('primary').hidden = isAvoidance || (!isCore && screen !== 'notes' && screen !== 'tasks');
+  document.querySelector('.toolbar').hidden = isAvoidance || (!isCore && (screen !== 'analytics' || params.has('goal')));
   $('primary').textContent = screen === 'habits' ? '＋ Привычка' : screen==='notes'?'＋ Новая заметка':screen==='tasks'?'＋ Задача':'＋ Событие';
   $('today').textContent = fmt(today, { weekday: 'long', day: 'numeric', month: 'long' });
   const days = week(focusDate);
@@ -170,7 +173,8 @@ function render() {
     : short(days[0]) + ' — ' + short(days[6]) + ' ' + days[6].getFullYear();
   const views = {
     home: homeScreen,
-    habits: habitsScreen,
+    habits: () => habitsScreen(isAvoidance),
+    focus: () => focusScreen(params.get('task')),
     tasks: plannerScreen,
     calendar,
     analytics: () => analyticsScreen(days, params),
@@ -182,6 +186,7 @@ function render() {
   $('view').querySelector('.mind-node-input')?.blur();
   const horizontal = $('orbit-scroll')?.scrollLeft;
   $('view').innerHTML = views[screen]();
+  updateFocusPanel();
   void mountNoteEditor();
   mountPlanet?.($('planet-anchor'));
   if (horizontal !== undefined && $('orbit-scroll')) $('orbit-scroll').scrollLeft = horizontal;
@@ -290,12 +295,6 @@ $('view').onclick=e=>{
   if (e.target.closest('[data-today-planner]')) plannerDate = new Date();
   const button=e.target.closest('button');
   if(!button)return;
-  if (button.hasAttribute('data-open-focus')) { openFocus(button.dataset.openFocus); return; }
-  if (button.hasAttribute('data-go-avoidance')) {
-    $('avoidance').querySelector('summary').focus({preventScroll:true});
-    $('avoidance').scrollIntoView({block:'start'});
-    return;
-  }
   if (button.dataset.progressStar) { selectProgressStar(button); return; }
   if (button.dataset.starPage) { changeConstellationPage(button.dataset.starPage); return; }
   if (avoidanceClick(button)) return;
