@@ -211,68 +211,6 @@ function startWorkspaceInteractions() {
   }, true);
 }
 
-function noteTools(note) {
-  return `<div class="note-checklist">${(note.checklist || []).map(item => `<div class="note-check-row">
-    <input class="check" type="checkbox" data-note-check="${safe(item.id)}" aria-label="Выполнить пункт" ${item.done ? 'checked' : ''}>
-    <input data-note-check-text="${safe(item.id)}" maxlength="180" value="${safe(item.text)}" placeholder="Пункт списка" aria-label="Текст пункта списка">
-    <button type="button" data-note-check-delete="${safe(item.id)}" aria-label="Удалить пункт">×</button>
-  </div>`).join('')}</div>
-  <div class="note-tools" aria-label="Инструменты заметки">
-    <button type="button" data-note-check-add>☑ Чек-лист</button>
-    <button type="button" data-note-format="bullet">• Список</button>
-    <button type="button" data-note-format="number">1. Список</button>
-  </div>`;
-}
-
-function editNoteItem(field) {
-  const note = state.notes.find(item => item.id === activeNoteId);
-  const item = note?.checklist?.find(item => item.id === (field.dataset.noteCheck || field.dataset.noteCheckText));
-  if (!item) return false;
-  if (field.type === 'checkbox') {
-    item.done = field.checked;
-    if (item.done) feedback('Пункт выполнен');
-  }
-  else item.text = field.value;
-  note.updated = new Date().toISOString();
-  save();
-  return true;
-}
-
-function noteToolsClick(button) {
-  const note = state.notes.find(item => item.id === activeNoteId);
-  if (!note) return false;
-  if (button.hasAttribute('data-note-check-add')) {
-    const id = crypto.randomUUID();
-    (note.checklist ??= []).push({id, text:'', done:false});
-    note.updated = new Date().toISOString();
-    if (!save()) return true;
-    render();
-    $('view').querySelector(`[data-note-check-text="${id}"]`)?.focus({preventScroll:true});
-    feedback('Пункт добавлен');
-    return true;
-  }
-  if (button.dataset.noteCheckDelete) {
-    note.checklist = note.checklist.filter(item => item.id !== button.dataset.noteCheckDelete);
-    note.updated = new Date().toISOString();
-    if (save()) render();
-    return true;
-  }
-  if (button.dataset.noteFormat) {
-    const body = $('note-body');
-    const start = body.selectionStart ? body.value.lastIndexOf('\n', body.selectionStart - 1) + 1 : 0;
-    const next = body.value.indexOf('\n', body.selectionEnd);
-    const end = next === -1 ? body.value.length : next;
-    const lines = body.value.slice(start, end).split('\n');
-    const formatted = lines.map((line, i) => (button.dataset.noteFormat === 'bullet' ? '• ' : `${i + 1}. `) +
-      line.replace(/^(?:•|\d+\.) /, '')).join('\n');
-    body.setRangeText(formatted, start, end, 'end');
-    body.dispatchEvent(new Event('input', {bubbles:true}));
-    body.focus();
-    return true;
-  }
-  return false;
-}
-
 const entranceVersion = 'arrival-from-open';
 const entranceRampMs = 500;
 const entranceTotalMs = 2000;

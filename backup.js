@@ -41,7 +41,9 @@ function parseBackup(text) {
     !records(data.tasks, task => string(task.name) && date(task.date) && typeof task.done === 'boolean' &&
       optionalText(task.parentId) && optionalText(task.project) && optional(task.time, value => value === '' || time(value))) ||
     !records(data.events, event => string(event.name) && date(event.date) && time(event.time)) ||
-    !records(data.notes, note => string(note.title) && string(note.body) && string(note.updated) && optional(note.checklist, items => records(items, item => string(item.text) && typeof item.done === 'boolean'))) ||
+    !records(data.notes, note => string(note.title) && string(note.body) && string(note.updated) &&
+      optional(note.content, content => object(content) && content.type === 'doc') &&
+      optional(note.checklist, items => records(items, item => string(item.text) && typeof item.done === 'boolean'))) ||
     !records(data.maps, map => string(map.name) && validTree(map.root)) ||
     !records(data.goals, goal => string(goal.title) && optionalText(goal.why) && optionalDate(goal.date) && optionalDate(goal.completedAt) &&
       optionalText(goal.criterion) && optionalText(goal.unit) &&
@@ -55,7 +57,7 @@ function parseBackup(text) {
       optional(entry.sleep, value => value === '' || (typeof value === 'number' && value >= 0 && value <= 24)) &&
       optional(entry.energy, value => Number.isInteger(value) && value >= 0 && value <= 5))) return null;
 
-  return data;
+  return {data, noteFiles:object(file.noteFiles) ? file.noteFiles : {}};
 }
 
 function startBackup() {
@@ -63,6 +65,7 @@ function startBackup() {
   const fileInput = $('backup-file');
   const status = $('backup-status');
   const restore = $('backup-restore');
+  const exportButton = $('backup-export');
   let candidate = null;
   let revision = 0;
 
@@ -75,15 +78,24 @@ function startBackup() {
     status.textContent = '';
     restore.hidden = true;
   });
-  $('backup-export').addEventListener('click', () => {
-    const now = new Date();
-    const file = new Blob([JSON.stringify({format:backupFormat, version:backupVersion, createdAt:now.toISOString(), data:state}, null, 2)], {type:'application/json'});
-    const url = URL.createObjectURL(file);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `jospat-${key(now)}.json`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  exportButton.addEventListener('click', async () => {
+    exportButton.disabled = true;
+    try {
+      const now = new Date();
+      const data = structuredClone(state);
+      const noteFiles = await exportNoteFiles(data.notes);
+      const file = new Blob([JSON.stringify({format:backupFormat, version:backupVersion, createdAt:now.toISOString(), data, noteFiles}, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `jospat-${key(now)}.json`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch {
+      status.textContent = 'Не удалось скачать копию. Проверь доступность вложений в заметках.';
+    } finally {
+      exportButton.disabled = false;
+    }
   });
 
   fileInput.addEventListener('change', async () => {
@@ -94,34 +106,49 @@ function startBackup() {
     status.textContent = '';
     if (!file) return;
 
-    let data;
-    try { data = parseBackup(await file.text()); }
-    catch { data = null; }
+    let contents;
+    try { contents = parseBackup(await file.text()); }
+    catch { contents = null; }
     if (revisionAtRead !== revision || !dialog.open) return;
 
-    if (!data) {
+    if (!contents) {
       status.textContent = 'Файл не подходит. Выбери JSON-копию, скачанную из JOSPAT.';
       return;
     }
-    candidate = data;
+    candidate = contents;
+    const {data} = contents;
     status.textContent = `${file.name}. Привычки — ${data.habits.length}, задачи — ${data.tasks.length}, записи дневника — ${Object.keys(data.journal).length}. Текущие данные будут заменены.`;
     restore.hidden = false;
   });
 
-  restore.addEventListener('click', () => {
+  restore.addEventListener('click', async () => {
     if (!candidate) return;
-    if (!save(candidate)) {
-      status.textContent = 'Восстановить копию не удалось. Текущие данные сохранены.';
-      return;
+    const attempt = revision;
+    const data = structuredClone(candidate.data);
+    const {noteFiles} = candidate;
+    restore.disabled = true;
+    fileInput.disabled = true;
+    try {
+      const ids = await restoreNoteFiles(data.notes, noteFiles);
+      if (attempt !== revision || !dialog.open || !save(data)) {
+        await writeNoteFiles([], ids);
+        if (attempt === revision && dialog.open) status.textContent = 'Восстановить копию не удалось. Текущие данные сохранены.';
+        return;
+      }
+      state = data;
+      activeNoteId = null;
+      activeMapId = null;
+      selectedMindNodeId = null;
+      mindHistory.clear();
+      mindCollapsed.clear();
+      dialog.close();
+      render();
+      $('status').textContent = 'Резервная копия восстановлена.';
+    } catch {
+      if (attempt === revision) status.textContent = 'Восстановить копию не удалось. Проверь файл и доступное место в браузере.';
+    } finally {
+      restore.disabled = false;
+      fileInput.disabled = false;
     }
-    state = candidate;
-    activeNoteId = null;
-    activeMapId = null;
-    selectedMindNodeId = null;
-    mindHistory.clear();
-    mindCollapsed.clear();
-    dialog.close();
-    render();
-    $('status').textContent = 'Резервная копия восстановлена.';
   });
 }

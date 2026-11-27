@@ -91,19 +91,24 @@ function lineChart(days) {
   const dates=days.map((date,index)=>dense && index % 5 !== 0 && index !== days.length-1 ? '' : `<text x="${x(index)}" y="203" text-anchor="middle" class="axis-label">${short(date)}</text>`).join('');
   return `<section class="panel line-panel"><div class="panel-head"><div><h2>Выполнение привычек по дням</h2><small>Средний процент выполнения всех привычек, запланированных на день</small></div></div><div class="chart-scroll"><svg class="productivity-chart" viewBox="0 0 700 215" role="img" aria-label="Выполнение привычек по датам: ${values.map((value,index)=>value===null?'':short(days[index])+' — '+value+'%').filter(Boolean).join(', ')}"><defs><linearGradient id="habit-area" x2="0%" y2="100%"><stop stop-color="#bbf029" stop-opacity=".28"/><stop offset="100%" stop-color="#bbf029" stop-opacity="0"/></linearGradient></defs>${grid}${curves}${latestMark}${dots}${dates}</svg></div></section>`;
 }
-function notesScreen() {
+function noteListItems() {
   const filtered = state.notes
     .filter(note => (note.title + ' ' + note.body + ' ' + (note.checklist || []).map(item => item.text).join(' ')).toLocaleLowerCase('ru').includes(noteQuery.toLocaleLowerCase('ru')))
     .sort((a,b) => Number(b.pinned)-Number(a.pinned) || b.updated.localeCompare(a.updated));
-  const current = state.notes.find(note => note.id === activeNoteId);
-  const items = filtered.length ? filtered.map(note => {
+  return filtered.length ? filtered.map(note => {
     const title = safe(note.title.trim() || 'Новая заметка');
     const preview = safe((note.body.trim() || note.checklist?.find(item => item.text.trim())?.text || '').replace(/\s+/g,' ').slice(0,90) || 'Начни писать…');
     const date = new Date(note.updated).toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
     return `<button class="note-item ${note.id===activeNoteId?'selected':''}" data-note="${safe(note.id)}"><strong>${title}</strong><span>${preview}</span><small>${note.pinned?'◆ Закреплено · ':''}${date}</small></button>`;
   }).join('') : `<p class="note-empty">${noteQuery?'Ничего не найдено.':'Нажми «Новая заметка», чтобы сохранить мысль.'}</p>`;
-  const list = `<div class="notes-list"><div class="notes-search"><span aria-hidden="true">⌕</span><input id="note-search" type="search" placeholder="Поиск заметок" aria-label="Поиск заметок" value="${safe(noteQuery)}"></div><div class="notes-list-head"><strong>Все заметки</strong><span>${state.notes.length}</span></div><div class="note-items">${items}</div></div>`;
-  const editor = current ? `<div class="note-actions"><button data-note-back>← К списку</button><span>Сохраняется автоматически</span><button data-pin-note="${safe(current.id)}" aria-label="${current.pinned?'Открепить':'Закрепить'} заметку">${current.pinned?'◆':'◇'}</button><button data-delete-note="${safe(current.id)}" aria-label="Удалить заметку">Удалить</button></div><input id="note-title" maxlength="120" placeholder="Название" aria-label="Название заметки" value="${safe(current.title)}"><textarea id="note-body" placeholder="Начни писать…" aria-label="Текст заметки">${safe(current.body)}</textarea>${noteTools(current)}<div class="note-updated">Изменено ${new Date(current.updated).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}</div>` : `<div class="note-placeholder"><span>✎</span><h2>Место для твоих мыслей</h2><p>Выбери заметку или создай новую.</p><button class="primary" data-new-note>＋ Новая заметка</button></div>`;
+}
+function noteUpdatedLabel(note) {
+  return `Изменено ${new Date(note.updated).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}`;
+}
+function notesScreen() {
+  const current = currentNote();
+  const list = `<div class="notes-list"><div class="notes-search"><span aria-hidden="true">⌕</span><input id="note-search" type="search" placeholder="Поиск заметок" aria-label="Поиск заметок" value="${safe(noteQuery)}"></div><div class="notes-list-head"><strong>Все заметки</strong><span>${state.notes.length}</span></div><div class="note-items" id="note-items">${noteListItems()}</div></div>`;
+  const editor = current ? `<div class="note-actions"><button data-note-back>← К списку</button><span id="note-save-status" role="status">Сохраняется автоматически</span><button data-pin-note="${safe(current.id)}" aria-label="${current.pinned?'Открепить':'Закрепить'} заметку">${current.pinned?'◆':'◇'}</button><button data-delete-note="${safe(current.id)}" aria-label="Удалить заметку">Удалить</button></div><input id="note-title" maxlength="120" placeholder="Название" aria-label="Название заметки" value="${safe(current.title)}">${noteEditorMarkup()}<div class="note-updated" id="note-updated">${noteUpdatedLabel(current)}</div>` : `<div class="note-placeholder"><span>✎</span><h2>Место для твоих мыслей</h2><p>Выбери заметку или создай новую.</p><button class="primary" data-new-note>＋ Новая заметка</button></div>`;
   return `<div class="notes-app ${current?'note-selected':''}">${list}<div class="note-editor">${editor}</div></div>`;
 }
 function calendar() {
@@ -177,6 +182,7 @@ function render() {
   $('view').querySelector('.mind-node-input')?.blur();
   const horizontal = $('orbit-scroll')?.scrollLeft;
   $('view').innerHTML = views[screen]();
+  void mountNoteEditor();
   mountPlanet?.($('planet-anchor'));
   if (horizontal !== undefined && $('orbit-scroll')) $('orbit-scroll').scrollLeft = horizontal;
   document.title = $('title').textContent + ' · JOSPAT';
@@ -312,7 +318,6 @@ $('view').onclick=e=>{
   }
 };
 $('view').addEventListener('input',e=>{
-  if (e.target.dataset.noteCheckText) editNoteItem(e.target);
   if(e.target.id==='journal-sleep'){
     const value=e.target.value===''?'':Math.max(0,Math.min(24,Number(e.target.value)));
     journalUpdate('sleep',value);
@@ -320,14 +325,13 @@ $('view').addEventListener('input',e=>{
   if(e.target.dataset.journalField)journalUpdate(e.target.dataset.journalField,e.target.value);
   if(e.target.id==='note-search'){
     noteQuery=e.target.value;
-    const position=e.target.selectionStart;
-    render();$('note-search')?.focus();$('note-search')?.setSelectionRange(position,position);
+    $('note-items').innerHTML = noteListItems();
   }
-  if(e.target.id==='note-title'||e.target.id==='note-body'){
-    const note=state.notes.find(item=>item.id===activeNoteId);
-    if(!note)return;
-    note[e.target.id==='note-title'?'title':'body']=e.target.value;
-    note.updated=new Date().toISOString();save();
+  if (e.target.id === 'note-title') {
+    const note = currentNote();
+    if (!note) return;
+    note.title = e.target.value;
+    touchNote(note);
   }
 });
 $('view').addEventListener('change',e=>{
@@ -340,7 +344,7 @@ $('view').addEventListener('submit', goalsSubmit);
 $('view').addEventListener('submit', plannerSubmit);
 $('view').onchange=e=>{
   const box=e.target;
-  if (editNoteItem(box) || goalsChange(box) || plannerChange(box)) return;
+  if (goalsChange(box) || plannerChange(box)) return;
   if(box.dataset.habit){
     const habit=state.habits.find(h=>h.id===box.dataset.habit);
     const date=box.dataset.date;
@@ -390,6 +394,7 @@ function focusSections() {
 const spaceReady = startStarfield();
 render();
 startWorkspaceInteractions();
+startNoteTools();
 startHomeEntrance(spaceReady);
 startTodayQuoteClock();
 startCloseDay();
