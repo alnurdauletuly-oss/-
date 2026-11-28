@@ -45,7 +45,7 @@ function parseBackup(text) {
     !records(data.habits, habit => string(habit.name) &&
       list(habit.days, day => Number.isInteger(day) && day >= 0 && day < 7) &&
       list(habit.done, date) && optional(habit.paused, days => list(days, date)) &&
-      optionalDate(habit.created) && optionalText(habit.color) && optionalText(habit.description)) ||
+      optionalDate(habit.created) && optionalText(habit.color) && optionalText(habit.description) && optionalText(habit.trigger)) ||
     !records(data.tasks, task => string(task.name) && date(task.date) && typeof task.done === 'boolean' &&
       optionalText(task.parentId) && optionalText(task.project) && optional(task.time, value => value === '' || time(value))) ||
     !records(data.events, event => string(event.name) && date(event.date) && time(event.time)) ||
@@ -55,7 +55,7 @@ function parseBackup(text) {
     !records(data.maps, map => string(map.name) && validTree(map.root)) ||
     !records(data.goals, goal => string(goal.title) && optionalText(goal.why) && optionalDate(goal.date) && optionalDate(goal.completedAt) &&
       optionalText(goal.criterion) && optionalText(goal.unit) &&
-      optional(goal.mode, mode => Object.hasOwn(goalModes, mode)) &&
+      optional(goal.mode, mode => goalModes.includes(mode)) &&
       (goal.mode === 'number' ? Number.isFinite(goal.target) : optional(goal.target, Number.isFinite)) &&
       optionalText(goal.habitId) && optional(goal.habitIds, ids => list(ids, id => string(id) && id.length > 0)) &&
       optionalDate(goal.startDate) && optional(goal.startValue, Number.isFinite) &&

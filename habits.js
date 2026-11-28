@@ -250,7 +250,7 @@ function saveHabit(name, {habit, goalId}) {
     first.reportValidity();
     return false;
   }
-  const fields = {name, days, description:$('habit-description').value.trim(), color:$('habit-color').value};
+  const fields = {name, days, trigger:$('habit-trigger').value.trim(), description:$('habit-description').value.trim(), color:$('habit-color').value};
   const updated = habit ? {...habit,...fields} : {id:crypto.randomUUID(), created:key(today), done:[], ...fields};
   const habits = habit ? state.habits.map(item => item === habit ? updated : item) : [...state.habits,updated];
   const goal = goalId && state.goals.find(item => item.id === goalId);

@@ -13,16 +13,16 @@ function avoidanceSummary(track, current) {
   }
   const todayUnmarked = !track.entries[current];
   const ongoing = previous && dayDistance(previous,current) <= Number(todayUnmarked) ? streak : 0;
-  const periodStart = key(shift(new Date(current + 'T12:00:00'),-29));
-  return {ongoing,record,recent:keptDays.filter(day => day >= periodStart).length,total:keptDays.length};
+  const offDays = Object.entries(track.entries).filter(([day,mark]) => mark === 'off' && day >= track.start && day <= current).length;
+  return {ongoing,record,offDays};
 }
 
 function avoidanceForm(track) {
   const current = key(new Date());
   const target = `<label>Цель в днях подряд<input type="number" name="target" min="1" max="3650" required value="${track?.target || 30}"></label>`;
   return `<form class="avoidance-form" data-avoidance-form="${safe(track?.id || '')}">
-    <label>${track ? 'Название привычки' : 'От какой привычки хочешь отказаться?'}
-      <input name="name" required maxlength="80" placeholder="Например, листать телефон перед сном" value="${safe(track?.name || '')}">
+    <label>${track ? 'Название счётчика' : 'Без чего хочешь провести день?'}
+      <input name="name" required maxlength="80" placeholder="Например, без телефона перед сном" value="${safe(track?.name || '')}">
     </label>
     ${track ? target : `<details class="avoidance-options"><summary>Настроить дату начала и цель</summary>
       <div class="avoidance-options-fields">
@@ -42,60 +42,64 @@ function avoidanceSelectedDay(track, current) {
 function avoidanceMarkButtons(track, day, context) {
   const id = safe(track.id);
   const mark = track.entries[day];
-  return `<div class="avoidance-marks" role="group" aria-label="${context === 'today' ? 'Отметить сегодня' : 'Отметить выбранный день'}">
+  const isToday = context === 'today';
+  return `<div class="avoidance-marks" role="group" aria-label="${isToday ? 'Отметить сегодня' : 'Отметить выбранный день'}">
     ${Object.entries(avoidanceLabels).map(([value,label]) => `<button type="button"
       class="${value === 'kept' && (!mark || mark === value) ? 'primary' : ''}" data-avoidance-mark="${value}"
-      data-track="${id}" data-avoidance-context="${context}" aria-pressed="${value === mark}">${label}</button>`).join('')}
-    ${context === 'history' && mark ? `<button type="button" data-avoidance-clear="${id}">Убрать отметку</button>` : ''}
+      data-track="${id}" data-avoidance-context="${context}" aria-pressed="${value === mark}">${isToday && value === 'kept' ? 'Сегодня без привычки' : label}</button>`).join('')}
+    ${mark ? `<button type="button" class="avoidance-clear" data-avoidance-clear="${id}" data-avoidance-context="${context}">Убрать отметку</button>` : ''}
   </div>`;
 }
 
-function avoidanceHistory(track, current, {record,recent,total}) {
+function avoidanceWeek(track, current, selected) {
   const id = safe(track.id);
-  const day = avoidanceSelectedDay(track,current);
-  const lastDay = dayDistance(day,current) < 7 ? current : day;
-  const days = Array.from({length:7},(_,index) => shift(new Date(lastDay + 'T12:00:00'),index - 6))
-    .filter(date => key(date) >= track.start);
-  return `<details class="avoidance-history">
-    <summary>Прошлые дни и статистика</summary>
-    <div class="avoidance-details">
-      <div class="avoidance-days" role="group" aria-label="Дни для отметки">${days.map(date => {
+  const days = Array.from({length:7},(_,index) => shift(new Date(current + 'T12:00:00'),index - 6));
+  return `<section class="avoidance-week"><h4>Последние 7 дней</h4>
+    <div class="avoidance-days" role="group" aria-label="Отметки за последние 7 дней">${days.map(date => {
         const dayKey = key(date);
         const value = track.entries[dayKey];
-        return `<button type="button" class="${value || ''}" data-avoidance-day="${dayKey}" data-track="${id}"
-          aria-pressed="${dayKey === day}" aria-label="${short(date)} · ${avoidanceLabels[value] || 'Без отметки'}">
-          <span>${date.getDate()}</span><b aria-hidden="true">${value === 'kept' ? '✓' : value === 'off' ? '—' : '·'}</b>
+        const beforeStart = dayKey < track.start;
+        return `<button type="button" class="${value || ''}${dayKey === current ? ' is-today' : ''}" data-avoidance-day="${dayKey}" data-track="${id}"
+          ${beforeStart ? 'disabled' : ''} ${dayKey === current ? 'aria-current="date"' : ''}
+          aria-pressed="${dayKey === selected}" aria-label="${short(date)} · ${beforeStart ? 'До начала' : avoidanceLabels[value] || 'Без отметки'}">
+          <small>${weekdays[weekday(date)]}</small><b aria-hidden="true">${value === 'kept' ? '✓' : value === 'off' ? '—' : '·'}</b><span>${date.getDate()}</span>
         </button>`;
-      }).join('')}</div>
-      <label class="avoidance-date">Выбрать дату<input type="date" data-avoidance-date="${id}" min="${safe(track.start)}" max="${current}" value="${day}"></label>
-      <p>${fmt(new Date(day + 'T12:00:00'), {day:'numeric', month:'long'})} <strong>${avoidanceLabels[track.entries[day]] || 'Без отметки'}</strong></p>
-      ${avoidanceMarkButtons(track,day,'history')}
-      <dl class="avoidance-totals">
-        <div><dt>Лучший результат подряд</dt><dd>${avoidanceDayCount.format(record)}</dd></div>
-        <div><dt>Дней без привычки за последние 30 дней</dt><dd>${recent}</dd></div>
-        <div><dt>Всего дней без привычки</dt><dd>${total}</dd></div>
-      </dl>
-    </div>
-  </details>`;
+    }).join('')}</div>
+    ${selected !== current ? `<div class="avoidance-day-editor">
+      <p>${fmt(new Date(selected + 'T12:00:00'), {day:'numeric', month:'long'})} <strong>${avoidanceLabels[track.entries[selected]] || 'Без отметки'}</strong></p>
+      ${avoidanceMarkButtons(track,selected,'history')}
+    </div>` : ''}
+    <details class="avoidance-history"><summary>Выбрать другую дату</summary>
+      <label class="avoidance-date">Дата отметки<input type="date" data-avoidance-date="${id}" min="${safe(track.start)}" max="${current}" value="${selected}"></label>
+    </details>
+  </section>`;
 }
 
 function avoidanceCard(track) {
   const id = safe(track.id);
   const current = key(new Date());
   const stats = avoidanceSummary(track,current);
-  const goal = avoidanceDayCount.format(track.target);
+  const progress = Math.min(stats.ongoing / track.target, 1);
+  const dayUnit = avoidanceDayCount.formatToParts(stats.ongoing).find(part => part.type === 'unit').value;
+  const selected = avoidanceSelectedDay(track,current);
   return `<article class="avoidance-card" data-avoidance-card="${id}">
-    <h3>${safe(track.name)}</h3>
-    ${track.start <= current ? `<div class="avoidance-today">
-      <p class="avoidance-status">Сегодня <strong>${avoidanceLabels[track.entries[current]] || 'Без отметки'}</strong></p>
-      ${avoidanceMarkButtons(track,current,'today')}
-    </div>` : `<p class="muted">Начнёшь ${fmt(new Date(track.start + 'T12:00:00'), {day:'numeric',month:'long'})}</p>`}
-    <div class="avoidance-stats">
-      <p><strong>${avoidanceDayCount.format(stats.ongoing)}</strong> подряд без привычки</p>
-      <progress aria-label="Дни подряд без привычки" value="${Math.min(stats.ongoing,track.target)}" max="${track.target}"></progress>
-      <p class="muted">Цель — ${goal} подряд</p>
+    <div class="avoidance-hero">
+      <h3>${safe(track.name)}</h3>
+      <div class="avoidance-orbit" style="--orbit-progress:${progress * 100}%" role="img"
+        aria-label="${avoidanceDayCount.format(stats.ongoing)} подряд без привычки. Цель — ${avoidanceDayCount.format(track.target)}.">
+        <div class="avoidance-orbit-core" aria-hidden="true"><strong>${stats.ongoing}</strong> <span>${dayUnit} подряд</span></div>
+        ${progress ? `<i style="--orbit-angle:${progress * 360}deg" aria-hidden="true"></i>` : ''}
+      </div>
+      <p class="avoidance-target">${progress === 1 ? 'Цель выполнена · ' : 'Цель · '}${avoidanceDayCount.format(track.target)} подряд</p>
     </div>
-    ${track.start <= current ? avoidanceHistory(track,current,stats) : ''}
+    <dl class="avoidance-totals">
+      <div><dt>Лучшая серия</dt><dd>${avoidanceDayCount.format(stats.record)}</dd></div>
+      <div><dt>Дней с привычкой</dt><dd>${stats.offDays}</dd></div>
+    </dl>
+    ${track.start <= current ? `<div class="avoidance-today">
+      <p class="avoidance-status">Сегодня <strong>${avoidanceLabels[track.entries[current]] || 'Ещё не отмечено'}</strong></p>
+      ${avoidanceMarkButtons(track,current,'today')}
+    </div>${avoidanceWeek(track,current,selected)}` : `<p class="muted">Начнёшь ${fmt(new Date(track.start + 'T12:00:00'), {day:'numeric',month:'long'})}</p>`}
     <details class="avoidance-settings">
       <summary>Настройки привычки</summary>
       <div class="avoidance-details">
@@ -110,8 +114,7 @@ function avoidanceScreen() {
   const tracks = state.avoidanceTracks || [];
   return `<section class="panel avoidance-panel" id="avoidance" aria-labelledby="avoidance-title">
     <h2 id="avoidance-title">Дни без вредных привычек</h2>
-    <p class="muted">Добавь привычку, от которой хочешь отказаться. Каждый день отмечай, как прошло.</p>
-    <details class="avoidance-create"><summary>＋ Добавить привычку</summary>${avoidanceForm()}</details>
+    <details class="avoidance-create" ${tracks.length ? '' : 'open'}><summary>＋ Новый счётчик</summary>${avoidanceForm()}</details>
     <div class="avoidance-grid">${tracks.map(avoidanceCard).join('')}</div>
   </section>`;
 }
@@ -189,7 +192,9 @@ function avoidanceClick(button) {
     if (confirm(`Удалить «${track.name}» и все отметки?`) && saveAvoidance(tracks.filter(item => item !== track))) {
       avoidanceDays.delete(id);
       button.closest('.avoidance-card').remove();
-      $('avoidance').querySelector('.avoidance-create summary').focus();
+      const create = $('avoidance').querySelector('.avoidance-create');
+      if (tracks.length === 1) create.open = true;
+      create.querySelector('summary').focus();
     }
     return true;
   }

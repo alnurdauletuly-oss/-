@@ -1,10 +1,10 @@
-const goalModes = {finish:'По факту выполнения', stages:'По этапам', number:'По числовому показателю'};
+const goalModes = ['finish', 'stages', 'number'];
 const goalTemplates = {
-  product:{title:'Запустить продукт', criterion:'Первый пользователь попробовал рабочую версию', mode:'stages',
+  product:{title:'Запустить продукт', criterion:'Первый пользователь попробовал рабочую версию',
     steps:['Описать проблему пользователя','Собрать прототип','Показать рабочую версию первому пользователю']},
-  exam:{title:'Подготовиться к экзамену', criterion:'Пробный экзамен решён на нужный балл', mode:'stages',
+  exam:{title:'Подготовиться к экзамену', criterion:'Пробный экзамен решён на нужный балл',
     steps:['Составить список тем','Закрыть слабые темы','Решить пробный вариант']},
-  reading:{title:'Прочитать 12 книг', criterion:'В журнале чтения 12 прочитанных книг', mode:'number', target:12, unit:'книг',
+  reading:{title:'Прочитать 12 книг', criterion:'В журнале чтения 12 прочитанных книг',
     steps:['Составить список книг','Выбрать первую книгу']}
 };
 let editGoalId = null;
@@ -30,14 +30,15 @@ function milestone(step) { return step.milestone !== false; }
 
 function goalResult(goal) {
   const mode = goalMode(goal);
-  if (mode === 'finish') return goal.completedAt ? 'Цель достигнута' : 'В работе';
+  if (goal.completedAt) return 'Цель достигнута';
   if (mode === 'number') {
     const latest = goalMeasures(goal).at(-1);
     const label = goal.unit ? ` ${goal.unit}` : '';
     return latest ? `${latest.value} из ${goal.target}${label}` : `Цель · ${goal.target}${label}`;
   }
-  const stages = goal.steps.filter(milestone);
-  return stages.length ? `${stages.filter(step => step.done).length} из ${stages.length} этапов` : 'Этапы пока не добавлены';
+  const stages = mode === 'stages' ? goal.steps.filter(milestone) : [];
+  const steps = stages.length ? stages : goal.steps;
+  return steps.length ? `${steps.filter(step => step.done).length} из ${steps.length} ${stages.length ? 'этапов' : 'шагов'}` : 'В работе';
 }
 
 function goalPace(goal) {
@@ -89,10 +90,15 @@ function goalHabitWeek(goal, habit, dates) {
   const scheduled = dates.filter(date => habitScheduled(habit,date));
   const done = scheduled.filter(date => habit.done.includes(key(date))).length;
   const color = habitColor(habit,state.habits.indexOf(habit));
+  const cue = habit.trigger || (habit.days.length === 7 ? 'Каждый день' : weekdays.filter((_,day) => habit.days.includes(day)).join(', ') || 'По плану');
   return `<article class="goal-habit" style="--habit-color:${color}">
-    <div class="goal-habit-head">
-      <div><h4>${safe(habit.name)}</h4>${habit.description ? `<p class="muted">${safe(habit.description)}</p>` : ''}</div>
-      <span class="goal-habit-count">${scheduled.length ? `${done} из ${scheduled.length} за неделю` : 'Нет запланированных дней'}</span>
+    <div class="goal-habit-sequence">
+      <div><small>Когда начать</small><p>${safe(cue)}</p></div>
+      <span class="goal-habit-arrow" aria-hidden="true">→</span>
+      <div><small>Что делать</small><h4>${safe(habit.name)}</h4>${habit.description ? `<p class="goal-habit-description">${safe(habit.description)}</p>` : ''}</div>
+    </div>
+    <div class="goal-habit-week-head">
+      <span>Эта неделя</span><strong>${scheduled.length ? `${done} из ${scheduled.length} выполнено` : 'Нет запланированных дней'}</strong>
     </div>
     <div class="goal-habit-week" role="group" aria-label="Отметки за неделю">
       ${dates.map(date => {
@@ -121,7 +127,7 @@ function goalHabitCard(goal) {
   return `<section class="goal-habit-card" data-goal-habits="${id}" aria-labelledby="goal-habits-${id}">
     <h3 id="goal-habits-${id}">Привычки для цели</h3>
     ${habits.length ? habits.map(habit => goalHabitWeek(goal,habit,dates)).join('') :
-      '<p class="muted">Добавь действие, которое помогает идти к цели. Например, читать по 10 минут.</p>'}
+      '<p class="muted">Например, после завтрака читать 10 минут.</p>'}
     <div class="goal-habit-setup">
       ${available.length ? `<label>Связать из трекера
         <select data-goal-habit="${id}"><option value="" selected disabled>Выбери привычку</option>
@@ -189,15 +195,18 @@ function goalReviewHistory(goal, since = '') {
 }
 
 function goalFields(goal) {
-  const mode = goal ? goalMode(goal) : 'stages';
-  return `<label>Чего хочешь достичь?<input name="title" maxlength="100" required value="${safe(goal?.title || '')}" placeholder="Например, сдать домашку"></label>
-    <label>Как поймёшь, что получилось?<input name="criterion" maxlength="180" ${goal ? '' : 'required'} value="${safe(goal?.criterion || '')}" placeholder="Работа отправлена"></label>
-    <label>Как отслеживать<select name="mode" data-goal-mode>${Object.entries(goalModes).map(([key,label]) => `<option value="${key}" ${key === mode ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
-    <label>Почему это важно <small>· необязательно</small><input name="why" maxlength="180" value="${safe(goal?.why || '')}"></label>
+  const number = goal && goalMode(goal) === 'number';
+  return `<label${goal ? '' : ' class="goal-title-field"'}>Чего хочешь достичь?<input name="title" maxlength="100" required value="${safe(goal?.title || '')}" placeholder="Например, сдать домашку"></label>
     <label>Срок <small>· необязательно</small><input type="date" name="date" min="1000-01-01" max="9999-12-31" value="${safe(goal?.date || '')}"></label>
-    <div class="goal-number-fields" ${mode === 'number' ? '' : 'hidden'}><label>Целевое значение<input name="target" type="number" step="any" ${mode === 'number' ? 'required' : 'disabled'} value="${safe(goal?.target ?? '')}"></label><label>Единица измерения<input name="unit" maxlength="32" placeholder="книг, км, страниц" value="${safe(goal?.unit || '')}"></label>
-    <label>Дата начала<input name="startDate" type="date" min="1000-01-01" max="9999-12-31" value="${safe(goal ? goal.startDate || '' : key(today))}"></label>
-    <label>Значение на старте<input name="startValue" type="number" step="any" value="${safe(goal?.startValue ?? '')}" placeholder="0"></label></div>`;
+    <details class="goal-form-details" ${goal?.criterion || goal?.why || number ? 'open' : ''}><summary>Дополнительные детали</summary>
+      <div class="goal-detail-fields">
+        <label>Как поймёшь, что получилось?<input name="criterion" maxlength="180" value="${safe(goal?.criterion || '')}" placeholder="Работа отправлена"></label>
+        <label>Почему это важно?<input name="why" maxlength="180" value="${safe(goal?.why || '')}"></label>
+        ${number ? `<label>Целевое значение<input name="target" type="number" step="any" required value="${safe(goal.target ?? '')}"></label>
+        <label>Единица измерения<input name="unit" maxlength="32" placeholder="книг, км, страниц" value="${safe(goal.unit || '')}"></label>
+        <label>Дата начала<input name="startDate" type="date" min="1000-01-01" max="9999-12-31" value="${safe(goal.startDate || '')}"></label>
+        <label>Значение на старте<input name="startValue" type="number" step="any" value="${safe(goal.startValue ?? '')}" placeholder="0"></label>` : ''}
+      </div></details>`;
 }
 
 function goalStepRow(goal, step) {
@@ -233,18 +242,16 @@ function measurementHistory(goal, measurements = goalMeasures(goal), editable = 
 
 function goalHistory(goal, since = '', editable = false) {
   const mode = goalMode(goal);
+  const completed = goal.completedAt && goal.completedAt >= since
+    ? `<p>Цель достигнута · ${showGoalDate(goal.completedAt)}</p>` : '';
   if (mode === 'number') {
     const measurements = goalMeasures(goal).filter(item => item.date >= since);
-    return measurementHistory(goal, measurements, editable);
+    return completed + measurementHistory(goal, measurements, editable);
   }
-  if (mode === 'finish') {
-    return `<p>${goal.completedAt ? 'Цель достигнута · ' + showGoalDate(goal.completedAt) : 'Отметь цель как достигнутую, когда результат готов.'}</p>`;
-  }
-  const finished = goal.steps.filter(step => milestone(step) && step.done);
-  const stages = finished.filter(step => step.doneAt && step.doneAt >= since)
+  const steps = goal.steps.filter(step => step.doneAt && step.done && step.doneAt >= since)
     .sort((a,b) => b.doneAt.localeCompare(a.doneAt));
-  return stages.length ? `<ul class="goal-history">${stages.map(step => `<li><time datetime="${safe(step.doneAt)}">${showGoalDate(step.doneAt)}</time><span>${safe(step.text)}</span></li>`).join('')}</ul>`
-    : `<p class="muted">${finished.length ? 'За этот период нет этапов с известной датой завершения.' : 'Отметь этап выполненным, чтобы добавить его в историю.'}</p>`;
+  return completed + (steps.length ? `<ul class="goal-history">${steps.map(step => `<li><time datetime="${safe(step.doneAt)}">${showGoalDate(step.doneAt)}</time><span>${safe(step.text)}</span></li>`).join('')}</ul>`
+    : completed ? '' : '<p class="muted">Здесь будут выполненные шаги и дата достижения цели.</p>');
 }
 
 function goalCard(goal) {
@@ -269,10 +276,10 @@ function goalCard(goal) {
         <button type="button" data-goal-finish-step="${id}" data-step-id="${safe(next.id)}">Выполнено</button>
       </div>` : ''}
       ${goalPace(goal)}
-      ${mode === 'finish' ? `<button type="button" data-goal-complete="${id}">${goal.completedAt ? 'Вернуть в работу' : 'Отметить как достигнутую'}</button>` : ''}
+      <button type="button" data-goal-complete="${id}">${goal.completedAt ? 'Вернуть в работу' : 'Отметить цель достигнутой'}</button>
       <a href="#analytics?goal=${safe(encodeURIComponent(goal.id))}">Посмотреть динамику</a>
     </div>
-    <h3 class="goal-step-title">Шаги · ${done} из ${goal.steps.length}</h3>
+    <h3 class="goal-step-title">Шаги${stages.length || mode === 'number' ? ` · ${done} из ${goal.steps.length}` : ''}</h3>
     <div class="goal-steps">${goal.steps.map(step => goalStepRow(goal,step)).join('')}</div>
     <form class="goal-add-step" data-goal-form="${id}"><input name="step" maxlength="100" required placeholder="Следующий шаг" aria-label="Новый шаг">
       ${mode === 'stages' ? '<label><input name="milestone" type="checkbox"> Этап</label>' : ''}
@@ -352,22 +359,26 @@ function goalsSubmit(event) {
   if (creating || data.editGoal) {
     const title = fields.title.value.trim();
     const criterion = fields.criterion.value.trim();
-    if (!title || (creating && !criterion)) return;
-    const mode = fields.mode.value;
-    const goal = creating ? {id:crypto.randomUUID(),steps:[]} : state.goals.find(item => item.id === data.editGoal);
-    if (!goal) return;
-    const target = fields.target.valueAsNumber;
+    if (!title) return;
+    const goal = state.goals.find(item => item.id === data.editGoal);
+    if (!creating && !goal) return;
+    const mode = creating ? 'finish' : goalMode(goal);
+    const target = fields.target?.valueAsNumber;
     if (mode === 'number' && !Number.isFinite(target)) return;
-    Object.assign(goal,{title, criterion, mode, why:fields.why.value.trim(), date:fields.date.value});
-    if (mode === 'number') Object.assign(goal,{target,unit:fields.unit.value.trim(),
+    const updates = {title, criterion, mode, why:fields.why.value.trim(), date:fields.date.value};
+    if (mode === 'number') Object.assign(updates,{target,unit:fields.unit.value.trim(),
       startDate:fields.startDate.value, startValue:Number.isFinite(fields.startValue.valueAsNumber) ? fields.startValue.valueAsNumber : undefined});
     if (creating) {
-      goal.steps = [...form.querySelectorAll('[name="templateStep"]')].map(input => input.value.trim()).filter(Boolean)
-        .map(text => ({id:crypto.randomUUID(),text,done:false,milestone:mode === 'stages'}));
-      state.goals.unshift(goal);
-    }
+      const steps = [...form.querySelectorAll('[name="templateStep"]')].map(input => input.value.trim()).filter(Boolean)
+        .map(text => ({id:crypto.randomUUID(),text,done:false,milestone:false}));
+      const goals = [{id:crypto.randomUUID(),steps,...updates}, ...state.goals];
+      if (!save({...state,goals})) return;
+      state.goals = goals;
+    } else if (!saveGoalChange(goal,updates)) return;
     editGoalId = null;
-    message = creating ? 'Цель добавлена' : 'Цель обновлена';
+    render();
+    feedback(creating ? 'Цель добавлена' : 'Цель обновлена');
+    return;
   } else if (data.goalMeasure) {
     const goal = state.goals.find(item => item.id === data.goalMeasure);
     const value = fields.value.valueAsNumber, date = fields.date.value;
@@ -471,8 +482,13 @@ function goalsClick(button) {
       if (!confirm('Удалить этот замер?')) return true;
       goal.measurements = goal.measurements.filter(item => item.id !== d.measureId);
     } else {
-      goal.completedAt = goal.completedAt ? '' : key(today);
-      if (goal.completedAt) feedback('Цель достигнута');
+      const completedAt = goal.completedAt ? '' : key(today);
+      if (saveGoalChange(goal,{completedAt})) {
+        render();
+        $('view').querySelector(`[data-goal-complete="${CSS.escape(goal.id)}"]`)?.focus({preventScroll:true});
+        feedback(completedAt ? 'Цель достигнута' : 'Цель снова в работе');
+      }
+      return true;
     }
   }
   if (save()) render();
@@ -490,10 +506,6 @@ function goalsChange(target) {
     if (template) {
       fields.title.value = template.title;
       fields.criterion.value = template.criterion;
-      fields.mode.value = template.mode;
-      fields.target.value = template.target ?? '';
-      fields.unit.value = template.unit || '';
-      goalsChange(fields.mode);
     }
     return true;
   }
@@ -512,13 +524,6 @@ function goalsChange(target) {
     goalReviewWeeks.set(id,target.value);
     render();
     $('view').querySelector(`[data-goal-review-week="${CSS.escape(id)}"]`)?.focus({preventScroll:true});
-    return true;
-  }
-  if (target.hasAttribute('data-goal-mode')) {
-    const number = target.value === 'number';
-    target.form.querySelector('.goal-number-fields').hidden = !number;
-    target.form.elements.target.disabled = !number;
-    target.form.elements.target.required = number;
     return true;
   }
   if (target.id === 'analytics-goal') {

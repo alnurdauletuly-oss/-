@@ -236,6 +236,9 @@ function openEditor(type, date=key(focusDate), options={}) {
   $('event-time-fields').hidden = type !== 'event';
   $('event-time').required = type === 'event';
   $('name').value = habit?.name || task?.name || '';
+  $('entry-name-label').textContent = isHabit ? 'Что делать?' : 'Название';
+  $('name').placeholder = isHabit ? 'Например, читать 10 минут' : '';
+  $('habit-trigger').value = habit?.trigger || '';
   $('habit-description').value = habit?.description || '';
   $('habit-color').value = habit ? habitColor(habit, state.habits.indexOf(habit)) : habitColors[state.habits.length % habitColors.length];
   $('task-project').value = task?.project || parent?.project || '';
