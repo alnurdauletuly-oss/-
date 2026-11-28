@@ -181,7 +181,7 @@ function render() {
     notes: notesScreen,
     journal: journalScreen,
     mind: mindScreen,
-    goals: goalsScreen
+    goals: () => goalsScreen(params)
   };
   mindSuspendEdit();
   const horizontal = $('orbit-scroll')?.scrollLeft;
@@ -421,12 +421,14 @@ document.addEventListener('click', event => {
 }, true);
 window.addEventListener('hashchange', () => {
   const fromHome = homeRoutes.has(observedRoute);
+  closeGoalEditors();
   observedRoute = location.hash;
   calendarTaskDraft = taskDraft = taskEditId = '';
   render();
   if (homeRoutes.has(observedRoute) && !fromHome && homePosition !== null) window.scrollTo(0, homePosition);
   else if (observedRoute === '#sections') focusSections();
   else window.scrollTo(0, 0);
+  if (observedRoute.startsWith('#goals?')) $('view').querySelector('.goal-navigation [aria-current]')?.focus({preventScroll:true});
 });
 function focusSections() {
   $('sections')?.focus({preventScroll:true});

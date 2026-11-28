@@ -109,7 +109,7 @@ function todayScreen() {
         <button class="today-inline" data-add-event="${date}">＋ Событие</button>
       </article>
     </div>
-    ${shownSteps.map(({goal, step}) => `<div class="today-goal"><p><strong>${step.date === date ? 'Шаг на сегодня' : 'Следующий шаг к цели'}</strong> <span>${safe(goal.title)}</span></p><label class="today-check today-step">${goalStepCheckbox(goal, step)}<span>${safe(step.text)}</span></label><a href="#goals">Цели</a></div>`).join('')}
+    ${shownSteps.map(({goal, step}) => `<div class="today-goal"><p><strong>${step.date === date ? 'Шаг на сегодня' : 'Следующий шаг к цели'}</strong> <span>${safe(goal.title)}</span></p><label class="today-check today-step">${goalStepCheckbox(goal, step)}<span>${safe(step.text)}</span></label><a href="${safe(goalHref(goal.id))}">Открыть цель</a></div>`).join('')}
     <div class="today-actions"><button class="primary" type="button" data-close-day>${entry.closedAt ? 'Итог дня · Изменить' : 'Закрыть день'}</button><a href="#journal">Открыть дневник</a></div>
   </section>`;
 }

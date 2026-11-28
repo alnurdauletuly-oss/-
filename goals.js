@@ -4,7 +4,7 @@ const goalTemplates = {
     steps:['Описать проблему пользователя','Собрать прототип','Показать рабочую версию первому пользователю']},
   exam:{title:'Подготовиться к экзамену', criterion:'Пробный экзамен решён на нужный балл',
     steps:['Составить список тем','Закрыть слабые темы','Решить пробный вариант']},
-  reading:{title:'Прочитать 12 книг', criterion:'В журнале чтения 12 прочитанных книг',
+  reading:{title:'Прочитать 12 книг', criterion:'В журнале чтения 12 прочитанных книг', target:12, unit:'книг',
     steps:['Составить список книг','Выбрать первую книгу']}
 };
 let editGoalId = null;
@@ -14,6 +14,10 @@ let goalAnalyticsDays = 7;
 const goalReviewWeeks = new Map();
 
 function goalMode(goal) { return goal.mode || 'stages'; }
+function goalHref(id) { return id ? `#goals?goal=${encodeURIComponent(id)}` : '#goals'; }
+function goalsInCreationOrder() { return [...state.goals].reverse(); }
+function closeGoalEditors() { editGoalId = editStepId = editMeasureId = null; }
+
 function goalSteps() {
   return state.goals.flatMap(goal => goal.steps.map(step => ({goal, step})));
 }
@@ -196,17 +200,16 @@ function goalReviewHistory(goal, since = '') {
 
 function goalFields(goal) {
   const number = goal && goalMode(goal) === 'number';
-  return `<label${goal ? '' : ' class="goal-title-field"'}>Чего хочешь достичь?<input name="title" maxlength="100" required value="${safe(goal?.title || '')}" placeholder="Например, сдать домашку"></label>
+  return `<label>Чего хочешь достичь?<input name="title" maxlength="100" required value="${safe(goal?.title || '')}" placeholder="Например, сдать домашку"></label>
+    <label>Как поймёшь, что получилось?<input name="criterion" maxlength="180" ${goal ? '' : 'required'} value="${safe(goal?.criterion || '')}" placeholder="Работа отправлена"></label>
+    <label>Почему это важно <small>· необязательно</small><input name="why" maxlength="180" value="${safe(goal?.why || '')}"></label>
     <label>Срок <small>· необязательно</small><input type="date" name="date" min="1000-01-01" max="9999-12-31" value="${safe(goal?.date || '')}"></label>
-    <details class="goal-form-details" ${goal?.criterion || goal?.why || number ? 'open' : ''}><summary>Дополнительные детали</summary>
-      <div class="goal-detail-fields">
-        <label>Как поймёшь, что получилось?<input name="criterion" maxlength="180" value="${safe(goal?.criterion || '')}" placeholder="Работа отправлена"></label>
-        <label>Почему это важно?<input name="why" maxlength="180" value="${safe(goal?.why || '')}"></label>
-        ${number ? `<label>Целевое значение<input name="target" type="number" step="any" required value="${safe(goal.target ?? '')}"></label>
-        <label>Единица измерения<input name="unit" maxlength="32" placeholder="книг, км, страниц" value="${safe(goal.unit || '')}"></label>
-        <label>Дата начала<input name="startDate" type="date" min="1000-01-01" max="9999-12-31" value="${safe(goal.startDate || '')}"></label>
-        <label>Значение на старте<input name="startValue" type="number" step="any" value="${safe(goal.startValue ?? '')}" placeholder="0"></label>` : ''}
-      </div></details>`;
+    ${!goal || number ? `<fieldset class="goal-number-fields" ${number ? '' : 'hidden disabled'}>
+      <label>Целевое значение<input name="target" type="number" step="any" required value="${safe(goal?.target ?? '')}"></label>
+      <label>Единица измерения<input name="unit" maxlength="32" placeholder="книг, км, страниц" value="${safe(goal?.unit || '')}"></label>
+      <label>Дата начала<input name="startDate" type="date" min="1000-01-01" max="9999-12-31" value="${safe(goal ? goal.startDate || '' : key(today))}"></label>
+      <label>Значение на старте<input name="startValue" type="number" step="any" value="${safe(goal?.startValue ?? '')}" placeholder="0"></label>
+    </fieldset>` : ''}`;
 }
 
 function goalStepRow(goal, step) {
@@ -291,13 +294,17 @@ function goalCard(goal) {
     ${goalReviewHistory(goal)}</aside>`;
 }
 
-function goalsScreen() {
+function goalsScreen(params) {
+  const goals = goalsInCreationOrder();
+  const active = goals.find(goal => goal.id === params.get('goal')) || goals[0];
   return `<section class="goals-page">
-    <details class="goal-new goal-create" ${state.goals.length ? '' : 'open'}><summary>＋ Новая цель</summary>
+    ${active ? `<nav class="goal-navigation" aria-label="Мои цели">${goals.map(goal =>
+      `<a href="${safe(goalHref(goal.id))}" ${goal === active ? 'aria-current="page"' : ''}>${safe(goal.title)}</a>`).join('')}</nav>` : ''}
+    <details class="goal-new goal-create" ${active ? '' : 'open'}><summary>＋ Новая цель</summary>
     <form id="new-goal-form" class="goal-fields"><label class="goal-template-field">Шаблон
       <select name="template" data-goal-template><option value="">Своя цель</option>${Object.entries(goalTemplates).map(([id,template])=>`<option value="${id}">${template.title}</option>`).join('')}</select>
     </label>${goalFields()}<div class="goal-template-steps" data-goal-template-steps hidden></div><button type="submit" class="primary">Создать цель</button></form></details>
-    <div class="goal-pairs">${state.goals.map(goal => `<div class="goal-pair">${goalCard(goal)}</div>`).join('') || '<p class="muted">Например, сдать домашку, выпустить приложение или прочитать 12 книг.</p>'}</div>
+    ${active ? `<div class="goal-pair">${goalCard(active)}</div>` : '<p class="muted">Например, сдать домашку, выпустить приложение или прочитать 12 книг.</p>'}
   </section>`;
 }
 
@@ -359,10 +366,15 @@ function goalsSubmit(event) {
   if (creating || data.editGoal) {
     const title = fields.title.value.trim();
     const criterion = fields.criterion.value.trim();
-    if (!title) return;
+    if (!title || (creating && !criterion)) {
+      const field = title ? fields.criterion : fields.title;
+      field.value = '';
+      field.reportValidity();
+      return;
+    }
     const goal = state.goals.find(item => item.id === data.editGoal);
     if (!creating && !goal) return;
-    const mode = creating ? 'finish' : goalMode(goal);
+    const mode = creating ? (fields.target.matches(':disabled') ? 'stages' : 'number') : goalMode(goal);
     const target = fields.target?.valueAsNumber;
     if (mode === 'number' && !Number.isFinite(target)) return;
     const updates = {title, criterion, mode, why:fields.why.value.trim(), date:fields.date.value};
@@ -370,14 +382,19 @@ function goalsSubmit(event) {
       startDate:fields.startDate.value, startValue:Number.isFinite(fields.startValue.valueAsNumber) ? fields.startValue.valueAsNumber : undefined});
     if (creating) {
       const steps = [...form.querySelectorAll('[name="templateStep"]')].map(input => input.value.trim()).filter(Boolean)
-        .map(text => ({id:crypto.randomUUID(),text,done:false,milestone:false}));
-      const goals = [{id:crypto.randomUUID(),steps,...updates}, ...state.goals];
+        .map(text => ({id:crypto.randomUUID(),text,done:false,milestone:mode === 'stages'}));
+      const created = {id:crypto.randomUUID(),steps,...updates};
+      const goals = [created, ...state.goals];
       if (!save({...state,goals})) return;
       state.goals = goals;
-    } else if (!saveGoalChange(goal,updates)) return;
+      location.hash = goalHref(created.id);
+      feedback('Цель добавлена');
+      return;
+    }
+    if (!saveGoalChange(goal,updates)) return;
     editGoalId = null;
     render();
-    feedback(creating ? 'Цель добавлена' : 'Цель обновлена');
+    feedback('Цель обновлена');
     return;
   } else if (data.goalMeasure) {
     const goal = state.goals.find(item => item.id === data.goalMeasure);
@@ -471,7 +488,19 @@ function goalsClick(button) {
   }
   if (d.goalDelete) {
     if (!confirm('Удалить эту цель, её шаги и историю?')) return true;
-    state.goals = state.goals.filter(goal => goal.id !== d.goalDelete);
+    const index = state.goals.findIndex(goal => goal.id === d.goalDelete);
+    const goals = state.goals.filter(goal => goal.id !== d.goalDelete);
+    if (index < 0 || !save({...state,goals})) return true;
+    state.goals = goals;
+    goalReviewWeeks.delete(d.goalDelete);
+    closeGoalEditors();
+    const next = goalHref((goals[index - 1] || goals[index])?.id);
+    if (location.hash !== next) location.replace(next);
+    else {
+      render();
+      $('view').querySelector('.goal-create > summary')?.focus();
+    }
+    return true;
   } else {
     const goal = state.goals.find(item => item.id === (d.stepDelete || d.goalComplete || d.measureDelete));
     if (!goal) return false;
@@ -499,6 +528,8 @@ function goalsChange(target) {
   const {goalStep, goalSchedule, stepId} = target.dataset;
   if (target.hasAttribute('data-goal-template')) {
     const template = goalTemplates[target.value];
+    const previous = goalTemplates[target.dataset.previousTemplate];
+    target.dataset.previousTemplate = target.value;
     const fields = target.form.elements;
     const steps = target.form.querySelector('[data-goal-template-steps]');
     steps.hidden = !template;
@@ -506,7 +537,14 @@ function goalsChange(target) {
     if (template) {
       fields.title.value = template.title;
       fields.criterion.value = template.criterion;
+    } else if (previous) {
+      if (fields.title.value === previous.title) fields.title.value = '';
+      if (fields.criterion.value === previous.criterion) fields.criterion.value = '';
     }
+    const numberFields = target.form.querySelector('.goal-number-fields');
+    numberFields.hidden = numberFields.disabled = !template?.target;
+    fields.target.value = template?.target ?? '';
+    fields.unit.value = template?.unit ?? '';
     return true;
   }
   if (target.dataset.goalHabit) {
@@ -550,7 +588,8 @@ function goalsChange(target) {
 
 function goalAnalytics(params) {
   const requested = params.get('goal');
-  const goal = state.goals.find(item => item.id === requested) || state.goals[0];
+  const goals = goalsInCreationOrder();
+  const goal = goals.find(item => item.id === requested) || goals[0];
   const empty = '<p class="muted">Создай первую цель, чтобы увидеть её прогресс.</p>';
   if (!goal) return `<section class="panel goal-analysis">${empty}<a href="#goals">Перейти к целям</a></section>`;
   const dates = Array.from({length:goalAnalyticsDays},(_,index) => shift(today,1 - goalAnalyticsDays + index));
@@ -560,7 +599,7 @@ function goalAnalytics(params) {
   const completed = goal.steps.filter(step => step.done && step.doneAt >= since).length;
   const late = goal.steps.filter(step => !step.done && step.date && step.date < key(today)).length;
   return `<section class="panel goal-analysis">
-    <div class="goal-analysis-toolbar"><label>Цель <select id="analytics-goal">${state.goals.map(item => `<option value="${safe(item.id)}" ${item.id === goal.id ? 'selected' : ''}>${safe(item.title)}</option>`).join('')}</select></label>
+    <div class="goal-analysis-toolbar"><label>Цель <select id="analytics-goal">${goals.map(item => `<option value="${safe(item.id)}" ${item.id === goal.id ? 'selected' : ''}>${safe(item.title)}</option>`).join('')}</select></label>
       <div class="orbit-range">${[7,30].map(days => `<button type="button" data-goal-period="${days}" aria-pressed="${days === goalAnalyticsDays}">${days === 7 ? 'Неделя' : 'Месяц'}</button>`).join('')}</div></div>
     <h2>${safe(goal.title)}</h2><p class="goal-analysis-result">${safe(goalResult(goal))}</p>
     ${goal.date ? `<p>Срок · ${showGoalDate(goal.date)}</p>` : ''}
@@ -568,7 +607,7 @@ function goalAnalytics(params) {
     ${goalPace(goal)}
     ${goalMode(goal) === 'number' && measurements.length ? goalMeasureChart(goal, measurements, since) : ''}
     ${goalHabitAnalytics(goal,dates)}
-    ${goalHistory(goal,since)}${goalReviewHistory(goal,since)}<a href="#goals">Открыть цели</a>
+    ${goalHistory(goal,since)}${goalReviewHistory(goal,since)}<a href="${safe(goalHref(goal.id))}">Открыть цель</a>
   </section>`;
 }
 

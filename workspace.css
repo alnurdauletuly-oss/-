@@ -438,11 +438,11 @@
 .goal-fields input, .goal-fields select, .measure-form input { display: block; margin-top: 4px; width: 100%; }
 .goal-fields button { min-height: 42px; }
 .goal-fields .primary { margin: 0; }
-.goal-form-details { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 8px; }
-.goal-form-details > summary { width: fit-content; font-weight: 550; color: var(--muted); cursor: pointer; }
-.goal-detail-fields { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%, 16rem), 1fr)); gap: 10px; margin-top: 8px; }
-.goal-fields .goal-title-field { grid-column: 1 / -1; }
-.goal-pairs { display: grid; gap: 14px; }
+#new-goal-form > .primary { grid-column: -2 / -1; }
+.goal-number-fields { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%, 14rem),1fr)); gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.goal-navigation { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.goal-navigation a { display: flex; align-items: center; min-height: 44px; min-width: 0; max-width: 100%; padding: 6px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); color: var(--muted); overflow-wrap: anywhere; }
+.goal-navigation a[aria-current], .goal-navigation a:hover { color: var(--lime); border-color: var(--lime); background: var(--accent-wash); }
 .goal-pair { display: grid; grid-template-columns: minmax(0,1.55fr) minmax(0,1fr); align-items: start; gap: 14px; }
 .goal-pair > * { min-width: 0; }
 .goal-card-head h2 { margin-right: auto; overflow-wrap: anywhere; }
