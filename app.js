@@ -57,9 +57,9 @@ try {
   else { seed(); save(); }
 } catch { seed(); $('status').textContent='Открыт пример недели.'; }
 
-function dailyProductivity(date) {
-  const plannedHabits=state.habits.filter(habit=>habitScheduled(habit, date));
-  const paused=state.habits.filter(habit=>habitPaused(habit,key(date))).length;
+function dailyProductivity(date, habits = state.habits) {
+  const plannedHabits=habits.filter(habit=>habitScheduled(habit, date));
+  const paused=habits.filter(habit=>habitPaused(habit,key(date))).length;
   const done=plannedHabits.filter(habit=>habit.done.includes(key(date))).length;
   return {date,planned:plannedHabits.length,done,paused,percent:plannedHabits.length?Math.round(done/plannedHabits.length*100):null};
 }
@@ -183,9 +183,10 @@ function render() {
     mind: mindScreen,
     goals: goalsScreen
   };
-  $('view').querySelector('.mind-node-input')?.blur();
+  mindSuspendEdit();
   const horizontal = $('orbit-scroll')?.scrollLeft;
   $('view').innerHTML = views[screen]();
+  mindResumeEdit();
   updateFocusPanel();
   updateFocusAmbience();
   observeProgressStar();
@@ -207,7 +208,7 @@ $('schedule').innerHTML=weekdays.map((day,i)=>`<label><input type="checkbox" val
 function openEditor(type, date=key(focusDate), options={}) {
   editorType = type;
   editorOptions = options;
-  const {habit, task, parentId} = options;
+  const {habit, task, parentId, goalId} = options;
   const isHabit = type === 'habit';
   const isTask = type === 'task';
   const parent = state.tasks.find(item => item.id === parentId);
@@ -216,7 +217,11 @@ function openEditor(type, date=key(focusDate), options={}) {
   weekdaysInputs[0].setCustomValidity('');
   weekdaysInputs.forEach(input => { input.checked = !habit || habit.days.includes(Number(input.value)); });
   $('name').setCustomValidity('');
-  $('dialog-title').textContent = isHabit ? (habit ? 'Изменить привычку' : 'Добавить привычку') : isTask ? (task ? 'Изменить задачу' : parent ? 'Новая подзадача' : 'Новая задача') : 'Новое событие';
+  $('dialog-title').textContent = isHabit ? (habit ? 'Изменить привычку' : goalId ? 'Привычка для цели' : 'Добавить привычку') : isTask ? (task ? 'Изменить задачу' : parent ? 'Новая подзадача' : 'Новая задача') : 'Новое событие';
+  const goal = isHabit && state.goals.find(item => item.id === (goalId || options.goalContext));
+  const context = $('habit-goal-context');
+  context.hidden = !goal;
+  context.textContent = goal ? `Цель «${goal.title}»` : '';
   $('editor').classList.toggle('habit-drawer', isHabit);
   $('template-fields').hidden = !isHabit || Boolean(habit);
   $('habit-fields').hidden = !isHabit;
@@ -261,11 +266,11 @@ $('habit-pause').onclick = () => {
 $('habit-delete').onclick = () => {
   const habit = editorOptions.habit;
   if (!habit || !confirm(`Удалить привычку «${habit.name}» и её отметки?`)) return;
-  state.habits = state.habits.filter(item => item.id !== habit.id);
-  save();
+  if (!deleteHabit(habit)) return;
   $('editor').close();
   render();
-  $('primary').focus();
+  if (editorOptions.goalContext) focusGoalHabit(editorOptions.goalContext);
+  else $('primary').focus();
 };
 $('template').onchange=()=>{$('name').value=templates[$('template').value]||'';};
 $('name').oninput=()=>$('name').setCustomValidity('');
@@ -281,8 +286,15 @@ $('entry').onsubmit=e=>{
   const name=$('name').value.trim();
   if(!name){$('name').setCustomValidity('Введите название');$('name').reportValidity();return;}
   if (editorType === 'habit') {
-    if (!saveHabit(name, editorOptions.habit)) return;
-  } else if (editorType === 'event') {
+    const habit = saveHabit(name,editorOptions);
+    if (!habit) return;
+    $('editor').close();
+    render();
+    const goal = editorOptions.goalId || editorOptions.goalContext;
+    if (goal) focusGoalHabit(goal,habit.id);
+    return;
+  }
+  if (editorType === 'event') {
     state.events.push({id:crypto.randomUUID(),name,date:$('date').value,time:$('event-time').value});
     focusDate = new Date(`${$('date').value}T12:00:00`);
   } else {
@@ -366,8 +378,14 @@ $('view').onchange=e=>{
     const habit=state.habits.find(h=>h.id===box.dataset.habit);
     const date=box.dataset.date;
     if (!habit || habitPaused(habit, date)) return;
-    habit.done=habit.done.filter(d=>d!==date);
-    if(box.checked)habit.done.push(date);
+    const done = habit.done.filter(day => day !== date);
+    if (box.checked) done.push(date);
+    const habits = state.habits.map(item => item === habit ? {...item,done} : item);
+    if (!save({...state,habits})) {
+      box.checked = habit.done.includes(date);
+      return;
+    }
+    state.habits = habits;
     lastHabitMark = box.checked ? {id:habit.id,date} : null;
   }else if(box.dataset.task){
     const task = state.tasks.find(t => t.id === box.dataset.task);
@@ -376,8 +394,11 @@ $('view').onchange=e=>{
     task.doneLate = box.checked && task.date < key(new Date());
     if (task.done && screen === 'tasks') feedback('Задача выполнена');
   }else return;
-  const selector=box.dataset.habit?`[data-habit="${CSS.escape(box.dataset.habit)}"][data-date="${box.dataset.date}"]`:`[data-task="${CSS.escape(box.dataset.task)}"]`;
-  save();
+  const goal = box.closest('[data-goal-habits]')?.dataset.goalHabits;
+  const scope = goal ? `[data-goal-habits="${CSS.escape(goal)}"] ` : '';
+  const selector = box.dataset.habit ? `${scope}[data-habit="${CSS.escape(box.dataset.habit)}"][data-date="${box.dataset.date}"]`
+    : `[data-task="${CSS.escape(box.dataset.task)}"]`;
+  if (box.dataset.task) save();
   render();
   Array.from($('view').querySelectorAll(selector)).find(input => input.getClientRects().length)?.focus({preventScroll:true});
   lastHabitMark = null;
@@ -418,6 +439,7 @@ startHomeEntrance(spaceReady);
 startTodayQuoteClock();
 startCloseDay();
 startBackup();
+startMindEditing();
 startMindPan();
 if (location.hash === '#sections') requestAnimationFrame(focusSections);
 

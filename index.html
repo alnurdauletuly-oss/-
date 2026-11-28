@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#05080A"><title>JOSPAT · Моё пространство</title>
-  <link rel="stylesheet" href="style.css?v=notes-1"><link rel="stylesheet" href="theme.css?v=planet-rotate3d"><link rel="stylesheet" href="workspace.css?v=focus-scenes"><script defer src="hub.js?v=focus-room"></script><script defer src="journal.js?v=goals-journal"></script><script defer src="mind.js?v=focus-scenes"></script><script defer src="goals.js?v=focus-scenes"></script><script defer src="today.js?v=focus-room"></script><script defer src="habits.js?v=focus-room"></script><script defer src="planner.js?v=focus-room"></script><script defer src="space.js?v=arrival-ramp"></script><script defer src="backup.js?v=focus-ambience"></script><script defer src="planet.js?v=arrival-ramp"></script><script defer src="interactions.js?v=notes-1"></script><script defer src="note-files.js?v=notes-1"></script><script defer src="notes.js?v=notes-1"></script><script defer src="focus-audio.js?v=focus-scenes"></script><script defer src="focus.js?v=focus-scenes"></script><script defer src="constellation.js?v=focus-scenes"></script><script defer src="avoidance.js?v=focus-room"></script><script defer src="app.js?v=focus-scenes"></script>
+  <link rel="stylesheet" href="style.css?v=notes-1"><link rel="stylesheet" href="theme.css?v=planet-rotate3d"><link rel="stylesheet" href="workspace.css?v=linked-habits"><script defer src="hub.js?v=focus-room"></script><script defer src="journal.js?v=goals-journal"></script><script defer src="mind.js?v=linked-habits"></script><script defer src="goals.js?v=linked-habits"></script><script defer src="today.js?v=focus-room"></script><script defer src="habits.js?v=linked-habits"></script><script defer src="planner.js?v=focus-room"></script><script defer src="space.js?v=arrival-ramp"></script><script defer src="backup.js?v=linked-habits"></script><script defer src="planet.js?v=arrival-ramp"></script><script defer src="interactions.js?v=notes-1"></script><script defer src="note-files.js?v=notes-1"></script><script defer src="notes.js?v=notes-1"></script><script defer src="focus-audio.js?v=focus-scenes"></script><script defer src="focus.js?v=focus-scenes"></script><script defer src="constellation.js?v=focus-scenes"></script><script defer src="avoidance.js?v=linked-habits"></script><script defer src="app.js?v=linked-habits"></script>
 </head>
 <body>
   <div class="site-nav">
@@ -28,6 +28,7 @@
   </main>
   <dialog id="editor"><form method="dialog" id="entry">
     <div class="dialog-head"><h2 id="dialog-title"></h2><button type="button" id="close" aria-label="Закрыть">×</button></div>
+    <p id="habit-goal-context" class="dialog-summary" hidden></p>
     <div id="template-fields"><label for="template">Начать с шаблона</label><select id="template"></select></div>
     <label for="name">Название</label><input id="name" required maxlength="90" autocomplete="off">
     <div id="habit-fields" hidden>

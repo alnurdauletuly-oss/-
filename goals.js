@@ -65,17 +65,97 @@ function goalPace(goal) {
     ${status ? `<span class="goal-pace-status ${behind ? 'behind' : ''}">${status}</span>` : ''}</div>`;
 }
 
+function goalHabitIds(goal) {
+  return Array.isArray(goal.habitIds) ? goal.habitIds : goal.habitId ? [goal.habitId] : [];
+}
+
+function goalHabitLink(ids) {
+  return {habitIds:[...new Set(ids)], habitId:undefined};
+}
+
+function goalHabits(goal) {
+  const ids = new Set(goalHabitIds(goal));
+  return state.habits.filter(habit => ids.has(habit.id));
+}
+
+function focusGoalHabit(goalId, habitId) {
+  const section = $('view').querySelector(`[data-goal-habits="${CSS.escape(goalId)}"]`);
+  const edit = habitId && section?.querySelector(`[data-goal-edit-habit][data-habit-id="${CSS.escape(habitId)}"]`);
+  (edit || section?.querySelector('[data-goal-habit], [data-goal-add-habit]'))?.focus({preventScroll:true});
+}
+
+function goalHabitWeek(goal, habit, dates) {
+  const id = safe(goal.id), habitId = safe(habit.id);
+  const scheduled = dates.filter(date => habitScheduled(habit,date));
+  const done = scheduled.filter(date => habit.done.includes(key(date))).length;
+  const color = habitColor(habit,state.habits.indexOf(habit));
+  return `<article class="goal-habit" style="--habit-color:${color}">
+    <div class="goal-habit-head">
+      <div><h4>${safe(habit.name)}</h4>${habit.description ? `<p class="muted">${safe(habit.description)}</p>` : ''}</div>
+      <span class="goal-habit-count">${scheduled.length ? `${done} из ${scheduled.length} за неделю` : 'Нет запланированных дней'}</span>
+    </div>
+    <div class="goal-habit-week" role="group" aria-label="Отметки за неделю">
+      ${dates.map(date => {
+        const day = key(date);
+        const paused = habitPaused(habit,day);
+        const planned = habitScheduled(habit,date);
+        const status = paused ? 'Пауза' : 'Свободный день';
+        return `<div class="goal-habit-day ${day === key(today) ? 'is-today' : ''} ${lastHabitMark?.id === habit.id && lastHabitMark.date === day ? 'just-marked' : ''}">
+          <small aria-hidden="true">${weekdays[weekday(date)]}</small>
+          ${planned ? habitCheck(habit,date) : `<span class="goal-habit-day-rest" role="img" aria-label="${short(date)} · ${status}" title="${status}">${paused ? 'Ⅱ' : '·'}</span>`}
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="goal-habit-actions">
+      <button type="button" data-goal-edit-habit="${id}" data-habit-id="${habitId}" aria-label="Изменить привычку ${safe(habit.name)}">Изменить</button>
+      <button type="button" data-goal-unlink-habit="${id}" data-habit-id="${habitId}" aria-label="Отвязать привычку ${safe(habit.name)} от этой цели">Отвязать</button>
+    </div>
+  </article>`;
+}
+
 function goalHabitCard(goal) {
-  const habit = state.habits.find(item => item.id === goal.habitId);
-  const days = habit ? week(today).filter(date => habitScheduled(habit,date)) : [];
-  const done = days.filter(date => date <= today && habit.done.includes(key(date))).length;
-  const picker = state.habits.length ? `<label>Привычка для цели
-    <select data-goal-habit="${safe(goal.id)}"><option value="">Без привязанной привычки</option>
-      ${state.habits.map(item=>`<option value="${safe(item.id)}" ${item === habit ? 'selected' : ''}>${safe(item.name)}</option>`).join('')}</select>
-    </label>` : '<p class="muted">Добавь привычку в трекере, чтобы связать её с целью.</p>';
-  return `<div class="goal-habit-card">${picker}
-    ${habit ? `<p><strong>${done} из ${days.length}</strong> за эту неделю</p>` : ''}
-    <a href="#habits">Открыть трекер привычек</a></div>`;
+  const habits = goalHabits(goal), dates = week(today);
+  const linked = new Set(goalHabitIds(goal));
+  const available = state.habits.filter(habit => !linked.has(habit.id));
+  const id = safe(goal.id);
+  return `<section class="goal-habit-card" data-goal-habits="${id}" aria-labelledby="goal-habits-${id}">
+    <h3 id="goal-habits-${id}">Привычки для цели</h3>
+    ${habits.length ? habits.map(habit => goalHabitWeek(goal,habit,dates)).join('') :
+      '<p class="muted">Добавь действие, которое помогает идти к цели. Например, читать по 10 минут.</p>'}
+    <div class="goal-habit-setup">
+      ${available.length ? `<label>Связать из трекера
+        <select data-goal-habit="${id}"><option value="" selected disabled>Выбери привычку</option>
+          ${available.map(habit => `<option value="${safe(habit.id)}">${safe(habit.name)}</option>`).join('')}
+        </select></label>` : ''}
+      <button type="button" data-goal-add-habit="${id}">＋ Новая привычка</button>
+    </div>
+  </section>`;
+}
+
+function goalHabitActivity(habits, dates) {
+  const daily = dates.filter(date => date <= today).map(date => dailyProductivity(date,habits));
+  const done = daily.reduce((sum,day) => sum + day.done,0);
+  const planned = daily.reduce((sum,day) => sum + day.planned,0);
+  return {daily,done,planned};
+}
+
+function goalHabitAnalytics(goal, dates) {
+  const habits = goalHabits(goal);
+  if (!habits.length) return '<section class="goal-habit-analysis"><h3>Привычки для цели</h3><p class="muted">Свяжи привычку с целью, чтобы увидеть её выполнение.</p></section>';
+  const {daily,done,planned} = goalHabitActivity(habits,dates);
+  return `<section class="goal-habit-analysis">
+    <h3>Привычки для цели</h3>
+    <p>${planned ? `<strong>${done} из ${planned}</strong> запланированных отметок · ${Math.round(done / planned * 100)}%` :
+      '<span class="muted">За этот период не было запланированных дней.</span>'}</p>
+    ${planned ? `<ol class="goal-habit-chart" aria-label="Выполнение привычек по дням">${daily.map(day => {
+      const label = `${short(day.date)} · ${day.planned ? `${day.done} из ${day.planned}` : 'Свободный день'}`;
+      return `<li aria-label="${label}" title="${label}"><div><span style="--habit-progress:${day.percent ?? 0}%"></span></div></li>`;
+    }).join('')}</ol><div class="goal-habit-chart-dates" aria-hidden="true"><span>${short(dates[0])}</span><span>${short(dates.at(-1))}</span></div>` : ''}
+    <ul class="goal-habit-analysis-list">${habits.map(habit => {
+      const summary = habitSummary(habit,dates);
+      return `<li><span>${safe(habit.name)}</span><strong>${summary.count ? `${summary.done} из ${summary.count}` : 'Без плана'}</strong></li>`;
+    }).join('')}</ul>
+  </section>`;
 }
 
 function goalReviewCard(goal) {
@@ -86,10 +166,12 @@ function goalReviewCard(goal) {
   const entry = goal.reviews?.find(review=>review.week === start);
   const completed = goal.steps.filter(step=>step.done && step.doneAt >= start && step.doneAt <= end);
   const upcoming = entry?.stepId && goal.steps.find(step => step.id === entry.stepId);
+  const habits = goalHabitActivity(goalHabits(goal),week(selectedWeek));
   return `<details class="goal-week-review" ${goalReviewWeeks.has(goal.id) ? 'open' : ''}><summary>Обзор недели</summary>
     <form data-goal-review="${safe(goal.id)}">
       <label>Неделя <select data-goal-review-week="${safe(goal.id)}" name="week">${[weekStart,previous].map(date=>`<option value="${key(date)}" ${key(date) === start ? 'selected' : ''}>${short(date)} — ${short(shift(date,6))}</option>`).join('')}</select></label>
       ${completed.length ? `<div><strong>Выполненные шаги</strong><ul>${completed.map(step=>`<li>${safe(step.text)}</li>`).join('')}</ul></div>` : '<p class="muted">За эту неделю пока нет завершённых шагов.</p>'}
+      ${habits.planned ? `<p>Привычки · <strong>${habits.done} из ${habits.planned}</strong> отметок за неделю</p>` : ''}
       <label>Что помогло или помешало?<textarea name="reflection" maxlength="500" rows="2">${safe(entry?.reflection || '')}</textarea></label>
       <label>Какой один шаг беру дальше?<input name="next" maxlength="100" value="${safe(entry?.next || '')}"></label>
       <label>Запланировать шаг <small>· необязательно</small><input name="date" type="date" value="${safe(upcoming?.date || '')}" min="1000-01-01" max="9999-12-31"></label>
@@ -325,6 +407,22 @@ function goalsSubmit(event) {
 
 function goalsClick(button) {
   const d = button.dataset;
+  const habitGoalId = d.goalAddHabit || d.goalEditHabit || d.goalUnlinkHabit;
+  if (habitGoalId) {
+    const goal = state.goals.find(item => item.id === habitGoalId);
+    if (!goal) return true;
+    if (d.goalAddHabit) {
+      openEditor('habit',key(today),{goalId:goal.id});
+    } else if (d.goalEditHabit) {
+      const habit = goalHabits(goal).find(item => item.id === d.habitId);
+      if (habit) openEditor('habit',key(today),{habit, goalContext:goal.id});
+    } else if (saveGoalChange(goal,goalHabitLink(goalHabitIds(goal).filter(id => id !== d.habitId)))) {
+      render();
+      focusGoalHabit(goal.id);
+      feedback('Привычка отвязана от цели');
+    }
+    return true;
+  }
   if (d.goalPlanStep || d.goalFinishStep) {
     const stepId = CSS.escape(d.stepId);
     if (d.goalPlanStep) {
@@ -401,11 +499,12 @@ function goalsChange(target) {
   }
   if (target.dataset.goalHabit) {
     const goal = state.goals.find(item=>item.id === target.dataset.goalHabit);
-    if (goal && (!target.value || state.habits.some(habit=>habit.id === target.value)) &&
-      saveGoalChange(goal,{habitId:target.value})) {
+    const habit = state.habits.find(item => item.id === target.value);
+    if (goal && habit && saveGoalChange(goal,goalHabitLink([...goalHabitIds(goal),habit.id]))) {
       render();
-      $('view').querySelector(`[data-goal-habit="${CSS.escape(goal.id)}"]`)?.focus({preventScroll:true});
-    }
+      focusGoalHabit(goal.id,habit.id);
+      feedback('Привычка связана с целью');
+    } else target.value = '';
     return true;
   }
   if (target.dataset.goalReviewWeek) {
@@ -449,7 +548,8 @@ function goalAnalytics(params) {
   const goal = state.goals.find(item => item.id === requested) || state.goals[0];
   const empty = '<p class="muted">Создай первую цель, чтобы увидеть её прогресс.</p>';
   if (!goal) return `<section class="panel goal-analysis">${empty}<a href="#goals">Перейти к целям</a></section>`;
-  const since = key(shift(today, 1 - goalAnalyticsDays));
+  const dates = Array.from({length:goalAnalyticsDays},(_,index) => shift(today,1 - goalAnalyticsDays + index));
+  const since = key(dates[0]);
   const measurements = goalMeasures(goal).filter(item => item.date >= since);
   const finish = goalMode(goal) === 'finish';
   const completed = goal.steps.filter(step => step.done && step.doneAt >= since).length;
@@ -462,6 +562,7 @@ function goalAnalytics(params) {
     ${!finish || goal.steps.length ? `<p>Шагов за период · ${completed} выполнено. Просрочено · ${late}.</p>` : ''}
     ${goalPace(goal)}
     ${goalMode(goal) === 'number' && measurements.length ? goalMeasureChart(goal, measurements, since) : ''}
+    ${goalHabitAnalytics(goal,dates)}
     ${goalHistory(goal,since)}${goalReviewHistory(goal,since)}<a href="#goals">Открыть цели</a>
   </section>`;
 }

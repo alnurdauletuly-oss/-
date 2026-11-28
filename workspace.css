@@ -505,6 +505,36 @@
   display: block; width: 100%; margin-top: 4px; min-width: 0; color: var(--text);
   border: 1px solid var(--line); border-radius: 8px; background: var(--field); padding: 8px; font: inherit;
 }
+.goal-habit-card, .goal-habit-analysis {
+  display: grid; gap: 10px; border: 1px solid var(--line); border-radius: 12px; padding: clamp(10px, 2vw, 15px);
+}
+.goal-habit { display: grid; gap: 8px; background: var(--field); border: 1px solid var(--line); border-radius: 9px; padding: 9px; }
+.goal-habit-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; }
+.goal-habit-head h4 { margin: 0; }
+.goal-habit-head p, .goal-habit-count { font-size: .8125rem; color: var(--muted); }
+.goal-habit-week { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 2px; }
+.goal-habit-day { display: grid; place-items: center; gap: 4px; min-width: 0; }
+.goal-habit-day small { color: var(--muted); }
+.goal-habit-day.is-today small { color: var(--lime); font-weight: 700; }
+.goal-habit-day .habit-orbit { width: min(100%, 44px); min-height: 36px; }
+.goal-habit-day-rest { display: grid; place-items: center; min-height: 36px; color: var(--muted); }
+.goal-habit-actions, .goal-habit-setup { display: flex; flex-wrap: wrap; align-items: end; gap: 6px; }
+.goal-habit-actions button { font-size: .8125rem; padding: 6px 9px; }
+.goal-habit-setup label { min-width: min(100%, 12rem); flex: 1 1 11rem; }
+.goal-habit-setup select, .goal-habit-setup button { min-height: 42px; }
+.goal-habit-analysis strong { color: var(--lime); }
+.goal-habit-chart, .goal-habit-analysis-list { padding: 0; margin: 0; list-style: none; }
+.goal-habit-chart { display: flex; gap: clamp(2px, .6vw, 7px); align-items: stretch; height: 70px; }
+.goal-habit-chart li { flex: 1; min-width: 0; display: flex; align-items: stretch; }
+.goal-habit-chart li > div { flex: 1; min-width: 0; display: flex; align-items: end; border-radius: 4px 4px 0 0; background: var(--field); border-bottom: 1px solid var(--line); }
+.goal-habit-chart li span { display: block; width: 100%; height: var(--habit-progress); border-radius: 4px 4px 0 0; background: var(--lime); }
+.goal-habit-chart-dates { display: flex; justify-content: space-between; color: var(--muted); font-size: .8125rem; }
+.goal-habit-analysis-list li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.goal-habit-analysis-list li span { min-width: 0; overflow-wrap: anywhere; }
+.goal-habit-analysis-list li strong { flex: none; }
+@media (max-width: 700px) {
+  .goal-habit-day .habit-orbit, .goal-habit-day-rest, .goal-habit-actions button { min-height: 44px; }
+}
 .goal-week-review { border-top: 1px solid var(--line); padding-top: 10px; }
 .goal-week-review summary, .goal-review-history summary { cursor: pointer; }
 .goal-week-review form { display: grid; gap: 8px; margin-top: 8px; }
@@ -884,41 +914,56 @@ main:has(.focus-panel) > header h1 { font-family: system-ui, sans-serif; font-we
 .habit-views { gap: 6px; }
 .habit-views a { display: inline-grid; place-items: center; min-height: 44px; }
 .avoidance-panel { margin-top: 0; }
-.avoidance-totals { display: grid; flex: 1 1 140px; margin: 0; gap: 6px; }
-.avoidance-totals div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2px 8px; font-size: .875rem; }
+.avoidance-panel > p { margin-top: 6px; }
+.avoidance-create { margin: 10px 0 0; }
+.avoidance-create > summary {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 8px 12px;
+  background: var(--accent-wash); border: 1px solid var(--line); border-radius: 8px; color: var(--lime);
+}
+.avoidance-create > summary::-webkit-details-marker { display: none; }
+.avoidance-panel summary { cursor: pointer; width: fit-content; }
+.avoidance-form { display: grid; align-items: end; gap: 8px; width: min(100%, 400px); }
+.avoidance-create .avoidance-form { margin-top: 10px; }
+.avoidance-form label { min-width: 0; margin: 0; }
+.avoidance-form input, .avoidance-date input { display: block; width: 100%; margin-top: 4px; }
+.avoidance-form .primary { width: auto; margin: 0; justify-self: start; min-height: 44px; }
+.avoidance-options > summary { padding: 6px 0; color: var(--muted); }
+.avoidance-options-fields { display: flex; gap: 10px; flex-wrap: wrap; padding: 4px 0; }
+.avoidance-options-fields label { flex: 1 1 120px; }
+.avoidance-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%, 325px),1fr)); gap: 10px; margin-top: 12px; }
+.avoidance-grid:empty { display: none; }
+.avoidance-card {
+  display: grid; align-content: start; gap: 12px; padding: clamp(12px, 2.5vw, 20px);
+  background: var(--field); border: 1px solid var(--line); border-radius: 12px;
+}
+.avoidance-card h3 { font-size: 1.25rem; overflow-wrap: anywhere; }
+.avoidance-today { display: grid; gap: 8px; }
+.avoidance-status { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.avoidance-status strong { color: var(--muted); font-size: .875rem; }
+.avoidance-marks { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.avoidance-marks button { min-height: 44px; font-size: .875rem; }
+.avoidance-marks [data-avoidance-mark=off][aria-pressed=true] { border-color: #ffcf75; color: #ffcf75; }
+.avoidance-stats { display: grid; gap: 4px; font-size: .875rem; }
+.avoidance-stats strong { font-size: 1.1rem; }
+.avoidance-stats progress { width: min(100%, 300px); height: 7px; accent-color: var(--lime); }
+.avoidance-history, .avoidance-settings { border-top: 1px solid var(--line); }
+.avoidance-history > summary, .avoidance-settings > summary { padding: 8px 0; min-height: 36px; font-size: .875rem; }
+.avoidance-details { display: grid; align-items: start; justify-items: start; gap: 8px; padding: 2px 0 4px; }
+.avoidance-details > p { font-size: .875rem; }
+.avoidance-details > p strong { margin-inline-start: 6px; }
+.avoidance-totals { display: grid; gap: 4px; font-size: .875rem; width: min(100%, 400px); }
+.avoidance-totals div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2px 8px; }
 .avoidance-totals dt { color: var(--muted); }
 .avoidance-totals dd { margin: 0; font-weight: 650; }
-.avoidance-panel > p, .avoidance-create { margin-top: 6px; }
-.avoidance-create summary { cursor: pointer; color: var(--lime); padding: 8px 0; }
-.avoidance-form { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; }
-.avoidance-form label { flex: 1 1 8rem; min-width: 0; margin: 0; }
-.avoidance-form input, .avoidance-date input { display: block; width: 100%; margin-top: 4px; }
-.avoidance-form .primary { width: auto; margin: 0; }
-.avoidance-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%, 325px),1fr)); gap: 10px; margin-top: 10px; }
-.avoidance-card { padding: 12px; background: var(--field); border: 1px solid var(--line); border-radius: 12px; }
-.avoidance-head, .avoidance-marks { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-.avoidance-head h3 { flex: 1 1 11rem; overflow-wrap: anywhere; }
-.avoidance-head button { min-height: 40px; font-size: .8125rem; }
-.avoidance-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin: 10px 0; }
-.avoidance-stats small { display: block; color: var(--muted); }
-.avoidance-ring {
-  width: 104px; height: 104px; flex: none; border-radius: 50%; padding: 4px;
-  background: conic-gradient(var(--lime) var(--series-progress),var(--line) 0);
-}
-.avoidance-ring > div { display: grid; place-content: center; text-align: center; height: 100%; border-radius: 50%; background: var(--field); }
-.avoidance-ring strong { font-size: 1.65rem; color: var(--lime); line-height: 1.1; }
-.avoidance-days { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 3px; margin: 8px 0; }
+.avoidance-days { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 3px; width: min(100%, 390px); }
 .avoidance-days button { display: grid; place-items: center; padding: 4px 1px; min-width: 0; min-height: 44px; font-size: .8125rem; }
 .avoidance-days .kept { color: var(--lime); }
 .avoidance-days .off { color: #ffcf75; }
-.avoidance-days [aria-pressed=true], .avoidance-marks [aria-pressed=true] { border-color: var(--lime); background: var(--accent-wash); }
+.avoidance-days [aria-pressed=true] { border-color: var(--lime); background: var(--accent-wash); }
 .avoidance-date { display: block; width: fit-content; color: var(--muted); font-size: .8125rem; }
 .avoidance-date input { color: var(--text); background: var(--side); border: 1px solid var(--line); border-radius: 6px; padding: 6px; }
-.avoidance-marks { margin-top: 8px; }
-.avoidance-marks button { min-height: 42px; font-size: .8125rem; }
 @media(max-width:700px) {
   .focus-badge { bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 6px); right: 8px; }
-  .avoidance-head button, .avoidance-marks button { min-height: 44px; }
   .focus-settings { justify-self: center; }
   .focus-settings summary { justify-content: center; }
   .constellation-sky {

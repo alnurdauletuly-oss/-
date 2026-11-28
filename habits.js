@@ -61,6 +61,14 @@ function habitSummary(habit, days) {
   return {done, count:elapsed.length, percent, streak:habitStreak(habit, days)};
 }
 
+function habitCheck(habit, date) {
+  const day = key(date);
+  return `<label class="habit-orbit">
+    <input type="checkbox" data-habit="${safe(habit.id)}" data-date="${day}" aria-label="${safe(habit.name)}, ${short(date)}" ${habit.done.includes(day) ? 'checked' : ''}>
+    <span aria-hidden="true"></span>
+  </label>`;
+}
+
 function habitRow({habit, color, percent, streak}, dates) {
   const completed = dates.map(date => habit.done.includes(key(date)));
   const cells = dates.map((date, index) => {
@@ -70,10 +78,7 @@ function habitRow({habit, color, percent, streak}, dates) {
     if (!habitScheduled(habit, date)) return '<td class="habit-day habit-rest" aria-label="Свободный день">·</td>';
     const classes = [checked && completed[index - 1] && 'join-left', checked && completed[index + 1] && 'join-right'];
     if (lastHabitMark?.id === habit.id && lastHabitMark.date === day) classes.push('just-marked');
-    return `<td class="habit-day ${classes.filter(Boolean).join(' ')}"><label class="habit-orbit">
-      <input type="checkbox" data-habit="${safe(habit.id)}" data-date="${day}" aria-label="${safe(habit.name)}, ${short(date)}" ${checked ? 'checked' : ''}>
-      <span aria-hidden="true"></span>
-    </label></td>`;
+    return `<td class="habit-day ${classes.filter(Boolean).join(' ')}">${habitCheck(habit,date)}</td>`;
   }).join('');
   return `<tr data-habit-row="${safe(habit.id)}" style="--habit-color:${color}">
     <th scope="row" class="habit-name">${habitHandle(habit)}<button type="button" data-habit-edit="${safe(habit.id)}" aria-label="Изменить привычку: ${safe(habit.name)}"><i aria-hidden="true"></i><span>${safe(habit.name)}${habit.description ? `<small>${safe(habit.description)}</small>` : ''}</span></button></th>
@@ -237,7 +242,7 @@ function updateHabitPauseButton(habit) {
   button.textContent = habit && habitPaused(habit, key(now)) ? 'Возобновить сегодня' : 'Пауза на сегодня';
 }
 
-function saveHabit(name, habit) {
+function saveHabit(name, {habit, goalId}) {
   const days = Array.from($('schedule').querySelectorAll(':checked'), box => Number(box.value));
   if (!days.length) {
     const first = $('schedule').querySelector('input');
@@ -246,7 +251,24 @@ function saveHabit(name, habit) {
     return false;
   }
   const fields = {name, days, description:$('habit-description').value.trim(), color:$('habit-color').value};
-  if (habit) Object.assign(habit, fields);
-  else state.habits.push({id:crypto.randomUUID(), created:key(today), done:[], ...fields});
+  const updated = habit ? {...habit,...fields} : {id:crypto.randomUUID(), created:key(today), done:[], ...fields};
+  const habits = habit ? state.habits.map(item => item === habit ? updated : item) : [...state.habits,updated];
+  const goal = goalId && state.goals.find(item => item.id === goalId);
+  if (goalId && !goal) return false;
+  const goals = goal ? state.goals.map(item => item === goal
+    ? {...item,...goalHabitLink([...goalHabitIds(item),updated.id])} : item) : state.goals;
+  if (!save({...state,habits,goals})) return false;
+  Object.assign(state,{habits,goals});
+  return updated;
+}
+
+function deleteHabit(habit) {
+  const habits = state.habits.filter(item => item !== habit);
+  const goals = state.goals.map(goal => {
+    const ids = goalHabitIds(goal);
+    return ids.includes(habit.id) ? {...goal,...goalHabitLink(ids.filter(id => id !== habit.id))} : goal;
+  });
+  if (!save({...state,habits,goals})) return false;
+  Object.assign(state,{habits,goals});
   return true;
 }

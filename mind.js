@@ -6,6 +6,7 @@ let mindZoom = 1;
 let mindEntrance = true;
 const mindCollapsed = new Set();
 const mindHistory = new Map();
+let mindEditing = null;
 
 function mindActiveMap() {
   if (!state.maps.length) {
@@ -141,6 +142,7 @@ function mindRefocus({edit = false, focus = true} = {}) {
 }
 
 function mindSelectNode(id) {
+  if (mindEditing && mindEditing.node.id !== id) mindFinishEdit();
   const view = $('view');
   const previous = view.querySelector('.mind-item.selected');
   const next = view.querySelector(`[data-mind-node="${CSS.escape(id)}"]`);
@@ -160,10 +162,10 @@ function mindSelectNode(id) {
   mindFocusNode();
 }
 
-function mindRecord(map) {
+function mindRecord(map, selection = selectedMindNodeId) {
   if (!mindHistory.has(map.id)) mindHistory.set(map.id, {undo:[], redo:[]});
   const history = mindHistory.get(map.id);
-  history.undo.push({root: structuredClone(map.root), name: map.name, selection: selectedMindNodeId});
+  history.undo.push({root: structuredClone(map.root), name: map.name, selection});
   if (history.undo.length > 40) history.undo.shift();
   history.redo.length = 0;
   const undo = $('view').querySelector('[data-mind-action="undo"]');
@@ -172,46 +174,108 @@ function mindRecord(map) {
   if (redo) redo.disabled = true;
 }
 
+function mindEditNodeExists(edit) {
+  return state.maps.includes(edit.map) && mindFind(edit.map.root, edit.node.id)?.node === edit.node;
+}
+
+function mindFinishEdit(cancel = false) {
+  const edit = mindEditing;
+  if (!edit) return;
+  mindEditing = null;
+  const {map, node, input, label, record} = edit;
+  const value = input.value.trim();
+  if (!cancel && mindEditNodeExists(edit) && node.text !== value) {
+    if (record) mindRecord(map, node.id);
+    node.text = value;
+    if (node === map.root && map.name === 'Новая карта' && value) {
+      map.name = value.slice(0, 80);
+      const option = Array.from($('mind-map-select')?.options || []).find(item => item.value === map.id);
+      if (option) option.textContent = map.name;
+    }
+    save();
+  }
+  label.textContent = node.text || 'Новая ветка';
+  label.title = label.textContent;
+  label.hidden = false;
+  input.remove();
+}
+
+function mindSuspendEdit() {
+  const edit = mindEditing;
+  if (!edit) return;
+  if (edit.map.id !== activeMapId || edit.node.id !== selectedMindNodeId || !mindEditNodeExists(edit)) {
+    mindFinishEdit();
+    return;
+  }
+  if (!edit.input.isConnected || edit.suspended) return;
+  const {input} = edit;
+  edit.selection = [input.selectionStart, input.selectionEnd, input.selectionDirection];
+  const canvas = $('mind-canvas');
+  edit.scroll = [canvas.scrollLeft, canvas.scrollTop];
+  edit.suspended = true;
+}
+
+function mindResumeEdit() {
+  const edit = mindEditing;
+  if (!edit || screen !== 'mind' || !edit.suspended || document.querySelector('dialog[open]')) return;
+  const label = $('view').querySelector(`[data-mind-node="${CSS.escape(edit.node.id)}"]`);
+  if (!label) return;
+  const {input} = edit;
+  if (edit.label !== label || !input.isConnected) {
+    edit.label = label;
+    label.after(input);
+    label.hidden = true;
+    if (edit.scroll) {
+      const canvas = $('mind-canvas');
+      [canvas.scrollLeft, canvas.scrollTop] = edit.scroll;
+    }
+  }
+  if (!document.hasFocus()) return;
+  edit.suspended = false;
+  if (document.activeElement !== input) input.focus({preventScroll:true});
+  input.setSelectionRange(...edit.selection);
+}
+
 function mindEdit(record = true) {
   const map = mindActiveMap(), {node} = mindFind(map.root, selectedMindNodeId);
+  if (mindEditing?.node === node) {
+    mindResumeEdit();
+    return;
+  }
+  mindFinishEdit();
   const label = $('view').querySelector(`[data-mind-node="${CSS.escape(node.id)}"]`);
-  if (!label || label.hidden) return;
+  if (!label) return;
   const input = document.createElement('input');
   input.className = 'mind-node-input';
   input.value = node.text;
   input.maxLength = 100;
   input.setAttribute('aria-label', 'Название ветки');
-  label.after(input);
-  label.hidden = true;
-  let cancelled = false;
-  input.addEventListener('blur', () => {
-    if (!cancelled && node.text !== input.value.trim()) {
-      if (record) mindRecord(map);
-      node.text = input.value.trim();
-      if (node === map.root && map.name === 'Новая карта' && node.text) {
-        map.name = node.text.slice(0, 80);
-        $('mind-map-select').selectedOptions[0].textContent = map.name;
-      }
-      save();
+  const edit = {map, node, label, input, record, suspended:true, selection:[0,node.text.length,'none']};
+  mindEditing = edit;
+  input.addEventListener('blur', event => {
+    if (mindEditing !== edit || edit.suspended) return;
+    if (event.relatedTarget && document.hasFocus()) {
+      mindFinishEdit();
+      return;
     }
-    label.textContent = node.text || 'Новая ветка';
-    label.title = label.textContent;
-    label.hidden = false;
-    input.remove();
-  }, {once:true});
+    // Leaving the browser can blur the input before the window loses focus.
+    setTimeout(() => {
+      if (mindEditing !== edit || edit.suspended || document.activeElement === input) return;
+      if (document.hasFocus() && !document.hidden) mindFinishEdit();
+      else mindSuspendEdit();
+    }, 0);
+  });
   input.addEventListener('keydown', event => {
     if (event.isComposing) return;
     const addChild = event.key === 'Tab' && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
     if (!addChild && event.key !== 'Enter' && event.key !== 'Escape') return;
     event.preventDefault();
     if (addChild && event.repeat) return;
-    cancelled = event.key === 'Escape';
-    input.blur();
+    mindFinishEdit(event.key === 'Escape');
     if (addChild) mindAction('child');
     else mindRefocus();
   });
-  input.focus();
-  input.select();
+  mindResumeEdit();
 }
 
 function mindReveal(root, id) {
@@ -223,8 +287,9 @@ function mindReveal(root, id) {
 }
 
 function mindAction(action) {
-  const map = mindActiveMap(), current = mindFind(map.root, selectedMindNodeId);
   if (action === 'edit') { mindEdit(); return; }
+  mindFinishEdit();
+  const map = mindActiveMap(), current = mindFind(map.root, selectedMindNodeId);
   if (action === 'fold') {
     if (!current.node.children.length) return;
     if (!mindCollapsed.delete(current.node.id)) mindCollapsed.add(current.node.id);
@@ -327,6 +392,7 @@ function mindClick(button) {
 }
 
 function mindChooseMap(id) {
+  mindFinishEdit();
   activeMapId = id;
   selectedMindNodeId = null;
   mindZoom = 1;
@@ -368,6 +434,30 @@ function mindKeydown(event) {
     event.preventDefault();
     mindSelectNode(id);
   }
+}
+
+function startMindEditing() {
+  window.addEventListener('blur', () => {
+    if (screen === 'mind') mindSuspendEdit();
+  });
+  window.addEventListener('focus', mindResumeEdit);
+  window.addEventListener('pagehide', event => {
+    if (event.persisted) mindSuspendEdit();
+    else mindFinishEdit();
+  });
+  window.addEventListener('pageshow', mindResumeEdit);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (screen === 'mind') mindSuspendEdit();
+    } else mindResumeEdit();
+  });
+  document.addEventListener('pointerdown', event => {
+    const edit = mindEditing;
+    if (!edit || screen !== 'mind' || event.button !== 0 || event.target === edit.input) return;
+    const link = event.target.closest('a[href^="#"]');
+    if ((link?.hash && link.hash !== location.hash) || event.target.closest('[data-mind-mode]')) mindSuspendEdit();
+    else if (edit.suspended) mindFinishEdit();
+  }, true);
 }
 
 function startMindPan() {
